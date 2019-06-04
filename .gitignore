@@ -7,7 +7,6 @@ conf/*
 apps/drassil/*
 env/dist/*
 env/user/*
-modules/*
 !modules/*.md
 !modules/*.sh
 build*/
@@ -91,3 +90,4 @@ local.properties
 #
 # ==================
 
+.vs/azerothcore-wotlk/v15/Browse.VC.opendb

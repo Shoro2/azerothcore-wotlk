@@ -319,6 +319,7 @@ class Map : public GridRefManager<NGridType>
         }
 
         void LoadGrid(float x, float y);
+        void LoadAllCells();
         bool UnloadGrid(NGridType& ngrid);
         virtual void UnloadAll();
 
@@ -501,6 +502,7 @@ class Map : public GridRefManager<NGridType>
         void SendZoneDynamicInfo(Player* player);
         void SendInitSelf(Player* player);
 
+        void PlayDirectSoundToMap(uint32 soundId, uint32 zoneId = 0);
         void SetZoneMusic(uint32 zoneId, uint32 musicId);
         void SetZoneWeather(uint32 zoneId, uint32 weatherId, float weatherGrade);
         void SetZoneOverrideLight(uint32 zoneId, uint32 lightId, uint32 fadeInTime);

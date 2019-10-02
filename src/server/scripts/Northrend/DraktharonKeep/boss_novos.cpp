@@ -54,12 +54,6 @@ enum Misc
     ROOM_STAIRS = 2
 };
 
-std::unordered_map<uint32, std::tuple <uint32, Position>> const npcSummon =
-{
-    { ROOM_RIGHT,   { NPC_SUMMON_CRYSTAL_HANDLER_TARGET,    { -341.31f, -724.40f, 28.57f, 0.0f } } },
-    { ROOM_LEFT,    { NPC_SUMMON_CRYSTAL_HANDLER_TARGET,    { -408.87f, -730.21f, 28.58f, 0.0f } } },
-    { ROOM_STAIRS,  { NPC_CRYSTAL_CHANNEL_TARGET,           { -378.40f, -813.13f, 59.74f, 0.0f } } },
-};
 
 class boss_novos : public CreatureScript
 {
@@ -115,24 +109,7 @@ class boss_novos : public CreatureScript
                 me->CastSpell(me, SPELL_ARCANE_BLAST, true);
                 me->CastSpell(me, SPELL_ARCANE_FIELD, true);
                 me->CastSpell(me, SPELL_DESPAWN_CRYSTAL_HANDLER, true);
-                
-                for (auto itr : npcSummon)
-                {
-                    uint32 summonEntry;
-                    Position summonPos;
-                    std::tie(summonEntry, summonPos) = itr.second;
-                    if (Creature *creature = me->SummonCreature(summonEntry, summonPos))
-                        switch (itr.first)
-                        {
-                            case ROOM_LEFT:
-                                _summonTargetLeftGUID = creature->GetGUID();
-                                break;
-                            case ROOM_RIGHT:
-                                _summonTargetRightGUID = creature->GetGUID();
-                                break;
-                        }
-                }
-
+                me->SummonCreature(NPC_CRYSTAL_CHANNEL_TARGET, -378.40f, -813.13f, 59.74f, 0.0f);
                 me->SetUInt64Value(UNIT_FIELD_TARGET, 0);
                 me->RemoveAllAuras();
                 me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);

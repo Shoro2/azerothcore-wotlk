@@ -188,94 +188,109 @@ public:
                 }
 
                 // Hand out the heirlooms. I prefer only the ring and trinkets for new characters.
+				//plate
+				player->learnSpell(750);
+				//mail
+				player->learnSpell(8737);
+				//leather
+				player->learnSpell(9077);
+				//seal of light
+				player->learnSpell(20165);
                 switch (player->getClass())
                 {
 
                 case CLASS_DEATH_KNIGHT:
                     player->AddItem(trinket, 2);
                     player->AddItem(ring, 1);
-                    //player->AddItem(shoulders, 1);
-                    //player->AddItem(chest, 1);
-                    //player->AddItem(weapon, 1);
-                    //player->AddItem(weapon2, 1);
-                    //player->AddItem(weapon3, 1);
-                    //player->AddItem(bag, 4);
+                    player->AddItem(shoulders, 1);
+                    player->AddItem(chest, 1);
+                    player->AddItem(weapon, 1);
+                    player->AddItem(weapon2, 1);
+                    player->AddItem(weapon3, 1);
+                    player->AddItem(bag, 4);
+					player->learnSpell(8255);
                     break;
 
                 case CLASS_PALADIN:
                     player->AddItem(trinket, 2);
                     player->AddItem(ring, 1);
-                    //player->AddItem(shoulders, 1);
-                    //player->AddItem(chest, 1);
-                    //player->AddItem(weapon, 1);
-                    //player->AddItem(weapon2, 1);
-                    //player->AddItem(bag, 4);
+                    player->AddItem(shoulders, 1);
+                    player->AddItem(chest, 1);
+                    player->AddItem(weapon, 1);
+                    player->AddItem(weapon2, 1);
+                    player->AddItem(bag, 4);
+					player->learnSpell(8255);
                     break;
 
                 case CLASS_WARRIOR:
                     player->AddItem(trinket, 2);
                     player->AddItem(ring, 1);
-                    //player->AddItem(shoulders, 1);
-                    //player->AddItem(chest, 1);
-                    //player->AddItem(weapon, 1);
-                    //player->AddItem(weapon2, 1);
-                    //player->AddItem(weapon3, 1);
-                    //player->AddItem(bag, 4);
+                    player->AddItem(shoulders, 1);
+                    player->AddItem(chest, 1);
+                    player->AddItem(weapon, 1);
+                    player->AddItem(weapon2, 1);
+                    player->AddItem(weapon3, 1);
+                    player->AddItem(bag, 4);
+					player->learnSpell(8255);
                     break;
 
                 case CLASS_HUNTER:
                     player->AddItem(trinket, 2);
                     player->AddItem(ring, 1);
-                    //player->AddItem(shoulders, 1);
-                    //player->AddItem(chest, 1);
-                    //player->AddItem(weapon, 1);
-                    //player->AddItem(weapon2, 1);
-                    //player->AddItem(weapon3, 1);
-                    //player->AddItem(bag, 4);
+                    player->AddItem(shoulders, 1);
+                    player->AddItem(chest, 1);
+                    player->AddItem(weapon, 1);
+                    player->AddItem(weapon2, 1);
+                    player->AddItem(weapon3, 1);
+                    player->AddItem(bag, 4);
                     break;
 
                 case CLASS_ROGUE:
                     player->AddItem(trinket, 2);
                     player->AddItem(ring, 1);
-                    //player->AddItem(shoulders, 1);
-                    //player->AddItem(chest, 1);
-                    //player->AddItem(weapon, 1);
-                    //player->AddItem(weapon2, 1);
-                    //player->AddItem(bag, 4);
+                    player->AddItem(shoulders, 1);
+                    player->AddItem(chest, 1);
+                    player->AddItem(weapon, 1);
+                    player->AddItem(weapon2, 1);
+                    player->AddItem(bag, 4);
+					player->learnSpell(8255);
                     break;
 
                 case CLASS_DRUID:
                     player->AddItem(trinket, 2);
                     player->AddItem(trinket2, 2);
                     player->AddItem(ring, 1);
-                    //player->AddItem(shoulders, 1);
-                    //player->AddItem(chest, 1);
-                    //player->AddItem(weapon, 1);
-                    //player->AddItem(shoulders2, 1);
-                    //player->AddItem(chest2, 1);
-                    //player->AddItem(weapon2, 1);
-                    //player->AddItem(bag, 4);
+                    player->AddItem(shoulders, 1);
+                    player->AddItem(chest, 1);
+                    player->AddItem(weapon, 1);
+                    player->AddItem(shoulders2, 1);
+                    player->AddItem(chest2, 1);
+                    player->AddItem(weapon2, 1);
+                    player->AddItem(bag, 4);
+					player->learnSpell(8255);
                     break;
 
                 case CLASS_SHAMAN:
                     player->AddItem(trinket, 2);
                     player->AddItem(ring, 1);
-                    //player->AddItem(shoulders, 1);
-                    //player->AddItem(chest, 1);
-                    //player->AddItem(weapon, 1);
-                    //player->AddItem(shoulders2, 1);
-                    //player->AddItem(chest2, 1);
-                    //player->AddItem(weapon2, 1);
-                    //player->AddItem(bag, 4);
+                    player->AddItem(shoulders, 1);
+                    player->AddItem(chest, 1);
+                    player->AddItem(weapon, 1);
+                    player->AddItem(shoulders2, 1);
+                    player->AddItem(chest2, 1);
+                    player->AddItem(weapon2, 1);
+                    player->AddItem(bag, 4);
+					player->learnSpell(8255);
                     break;
 
                 default:
                     player->AddItem(trinket, 2);
                     player->AddItem(ring, 1);
-                    //player->AddItem(shoulders, 1);
-                    //player->AddItem(chest, 1);
-                    //player->AddItem(weapon, 1);
-                    //player->AddItem(bag, 4);
+                    player->AddItem(shoulders, 1);
+                    player->AddItem(chest, 1);
+                    player->AddItem(weapon, 1);
+                    player->AddItem(bag, 4);
+					player->learnSpell(26789);
                     break;
                 }
 
@@ -288,108 +303,24 @@ public:
             // If enabled, learn additional skills
             if (sConfigMgr->GetBoolDefault("CustomLogin.Skills", true))
             {
-                switch (player->getClass())
-                {
-
-                    /*
-                        // Skill Reference
-
-                        player->learnSpell(204);	// Defense
-                        player->learnSpell(264);	// Bows
-                        player->learnSpell(5011);	// Crossbow
-                        player->learnSpell(674);	// Dual Wield
-                        player->learnSpell(15590);	// Fists
-                        player->learnSpell(266);	// Guns
-                        player->learnSpell(196);	// Axes
-                        player->learnSpell(198);	// Maces
-                        player->learnSpell(201);	// Swords
-                        player->learnSpell(750);	// Plate Mail
-                        player->learnSpell(200);	// PoleArms
-                        player->learnSpell(9116);	// Shields
-                        player->learnSpell(197);	// 2H Axe
-                        player->learnSpell(199);	// 2H Mace
-                        player->learnSpell(202);	// 2H Sword
-                        player->learnSpell(227);	// Staves
-                        player->learnSpell(2567);	// Thrown
-                    */
-
-                case CLASS_PALADIN:
-                    player->learnSpell(196);	// Axes
-                    player->learnSpell(750);	// Plate Mail
-                    player->learnSpell(200);	// PoleArms
-                    player->learnSpell(197);	// 2H Axe
-                    player->learnSpell(199);	// 2H Mace
-                    break;
-
-                case CLASS_SHAMAN:
-                    player->learnSpell(15590);	// Fists
-                    player->learnSpell(8737);	// Mail
-                    player->learnSpell(196);	// Axes
-                    player->learnSpell(197);	// 2H Axe
-                    player->learnSpell(199);	// 2H Mace
-                    break;
-
-                case CLASS_WARRIOR:
-                    player->learnSpell(264);	// Bows
-                    player->learnSpell(5011);	// Crossbow
-                    player->learnSpell(674);	// Dual Wield
-                    player->learnSpell(15590);	// Fists
-                    player->learnSpell(266);	// Guns
-                    player->learnSpell(750);	// Plate Mail
-                    player->learnSpell(200);	// PoleArms
-                    player->learnSpell(199);	// 2H Mace
-                    player->learnSpell(227);	// Staves
-                    break;
-
-                case CLASS_HUNTER:
-                    player->learnSpell(674);	// Dual Wield
-                    player->learnSpell(15590);	// Fists
-                    player->learnSpell(266);	// Guns
-                    player->learnSpell(8737);	// Mail
-                    player->learnSpell(200);	// PoleArms
-                    player->learnSpell(227);	// Staves
-                    player->learnSpell(202);	// 2H Sword
-                    break;
-
-                case CLASS_ROGUE:
-                    player->learnSpell(264);	// Bows
-                    player->learnSpell(5011);	// Crossbow
-                    player->learnSpell(15590);	// Fists
-                    player->learnSpell(266);	// Guns
-                    player->learnSpell(196);	// Axes
-                    player->learnSpell(198);	// Maces
-                    player->learnSpell(201);	// Swords
-                    break;
-
-                case CLASS_DRUID:
-                    player->learnSpell(1180);	// Daggers
-                    player->learnSpell(15590);	// Fists
-                    player->learnSpell(198);	// Maces
-                    player->learnSpell(200);	// PoleArms
-                    player->learnSpell(227);	// Staves
-                    player->learnSpell(199);	// 2H Mace
-                    break;
-
-                case CLASS_MAGE:
-                    player->learnSpell(201);	// Swords
-                    break;
-
-                case CLASS_WARLOCK:
-                    player->learnSpell(201);	// Swords
-                    break;
-
-                case CLASS_PRIEST:
-                    player->learnSpell(1180);	// Daggers
-                    break;
-
-                case CLASS_DEATH_KNIGHT:
-                    player->learnSpell(198);	// Maces
-                    player->learnSpell(199);	// 2H Mace
-                    break;
-
-                default:
-                    break;
-                }
+				player->learnSpell(204);	// Defense
+				player->learnSpell(264);	// Bows
+				player->learnSpell(5011);	// Crossbow
+				player->learnSpell(674);	// Dual Wield
+				player->learnSpell(15590);	// Fists
+				player->learnSpell(266);	// Guns
+				player->learnSpell(196);	// Axes
+				player->learnSpell(198);	// Maces
+				player->learnSpell(201);	// Swords
+				player->learnSpell(750);	// Plate Mail
+				player->learnSpell(200);	// PoleArms
+				player->learnSpell(9116);	// Shields
+				player->learnSpell(197);	// 2H Axe
+				player->learnSpell(199);	// 2H Mace
+				player->learnSpell(202);	// 2H Sword
+				player->learnSpell(227);	// Staves
+				player->learnSpell(2567);	// Thrown
+                
 
                 // Inform the player they have new skills
                 std::ostringstream ss;
@@ -401,8 +332,6 @@ public:
             if (sConfigMgr->GetBoolDefault("CustomLogin.SpecialAbility", true))
             {
                 // Learn Specialized Skills
-                player->learnSpell(1784);	// Stealth
-                player->learnSpell(921);	// Pick Pocket
                 player->learnSpell(1804);	// Lockpicking
                 player->learnSpell(11305);	// Sprint (3)
                 player->learnSpell(5384);	// Feign Death
@@ -446,7 +375,7 @@ public:
             }
 
             // If enabled.. set exalted factions (AzerothCore config for rep not working as of 2017-08-25)
-            if (sConfigMgr->GetBoolDefault("CustomLogin.Reputation", true))
+            if (sConfigMgr->GetBoolDefault("CustomLogin.Reputation", false))
             {
                 switch (player->GetTeamId())
                 {

@@ -75,6 +75,7 @@ public:
         
        
     }
+
     int getRandEnchantment(Item* item, Player* player)
     {
 		ChatHandler cHandler = ChatHandler(player->GetSession());

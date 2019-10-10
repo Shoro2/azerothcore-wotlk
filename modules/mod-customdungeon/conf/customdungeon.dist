@@ -1,0 +1,11 @@
+[worldserver]
+
+# Enable customdungeon module
+# default: true
+
+customdungeon.enable = true
+
+# Enable module announce on player login
+# default: true
+
+customdungeon.announceModule = true

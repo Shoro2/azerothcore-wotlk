@@ -10,6 +10,30 @@
 [![StackOverflow](http://img.shields.io/badge/stackoverflow-azerothcore-blue.svg)]( https://stackoverflow.com/questions/tagged/azerothcore?sort=newest)
 [![Discord](https://img.shields.io/discord/217589275766685707.svg)](https://discord.gg/gXNKCG5)
 
+## Customization:
+- Diablo like system:
+	- Added 100% random echants scaling with item required lvl (3 enchantsment slots on each item + up to 3 rnd suffixes)
+	- Added way more Npc in dungeons
+	- Added low cd claeve spells for each class
+	- Every class can wear every armor type
+	- Changed spell cooldowns of many spells
+	- Changed scaling of these spells
+	- Added a ladder system for dungeon runs (score depending on lvl, kills and time)
+	- Scaling lvl of dungeon npcs
+	- Scaling dungeon difficulty with party size
+- Items stack up to 1000
+- Learn all your class talents
+- Learn additional talents/spells from other classes
+- Learn classspells on lvl up
+- Buy a guildhouse for your guild
+- Account achievments/mounts
+- PvP Killing Streak System
+
+
+
+
+
+## Acore-ReadMe:
 
 ## Introduction
 

@@ -3,7 +3,7 @@
 # Enable customdungeon module
 # default: true
 
-customdungeon.enable = true
+customdungeon.enabled = true
 
 # Enable module announce on player login
 # default: true

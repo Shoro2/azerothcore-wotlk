@@ -1,2 +1,1 @@
-void AddMyWorldScripts();
-void AddMyPlayerScripts();
+void Addmod_customdungeonScripts();

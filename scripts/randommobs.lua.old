@@ -6,7 +6,7 @@ local function CheckForRng(event, instance_data, map, creature)
 		print(creature:GetName())
 		local hp = creature:GetMaxHealth()
 		creature:SetMaxHealth(hp*2)
-		creature:AddAura(33719,creature)
+		creature:AddAura(100000,creature)
 	end
 	if creature:IsWorldBoss() == false then 
 		current_mob = current_mob + 1
@@ -29,7 +29,24 @@ local function GetInstanceId(event, player)
 	
 end
 
+local function CheckCreature(event, creature)
+	local map = creature:GetMap()
+	if map:IsDungeon() then
+		if current_mob % 25 == 0 and creature:IsWorldBoss() == false then
+			print(creature:GetName())
+			local hp = creature:GetMaxHealth()
+			creature:SetMaxHealth(hp*2)
+			creature:AddAura(100000,creature)
+		end
+		if creature:IsWorldBoss() == false then 
+			current_mob = current_mob + 1
+		end
+	end
+	print(creature:GetName())
+end
+
 RegisterPlayerEvent(28, GetInstanceId)
+RegisterCreatureEvent(5, CheckCreature)
 
 
 

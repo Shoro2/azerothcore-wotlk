@@ -59,9 +59,9 @@ public:
 	{
 		if (!reload) {
 			std::string conf_path = _CONF_DIR;
-			std::string cfg_file = conf_path + "/mod_customserver.conf";
+			std::string cfg_file = conf_path + "Settings/modules/mod_customserver.conf";
 #ifdef WIN32
-			cfg_file = "mod_customserver.conf";
+			cfg_file = "Settings/modules/mod_customserver.conf";
 #endif
 			std::string cfg_def_file = cfg_file + ".dist";
 			sConfigMgr->LoadMore(cfg_def_file.c_str());
@@ -96,12 +96,6 @@ public:
 			// Announce the module and any core mods or other functions it currently supports
 			ChatHandler(player->GetSession()).SendSysMessage("This server is running the |cff4CFF00CustomServer |rmodule.");
 			ChatHandler(player->GetSession()).SendSysMessage("This server is running the |cff4CFF00DungeonCheckpoints |rmodule.");
-
-			// Unused mod references
-
-			// ChatHandler(player->GetSession()).SendSysMessage("This server is running the |cff4CFF00ItemObject Gossip |rmodule.");
-			// ChatHandler(player->GetSession()).SendSysMessage("This server is running the |cff4CFF00FireworksOnLevelUp |rmodule.");
-			// ChatHandler(player->GetSession()).SendSysMessage("This server is running the |cff4CFF00BetterPetHandling |rmodule.");
 		}
 
 	}

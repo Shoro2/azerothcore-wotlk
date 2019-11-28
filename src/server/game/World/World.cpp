@@ -417,7 +417,7 @@ void World::LoadModuleConfigSettings()
         std::string conf_path = _CONF_DIR;
         std::string cfg_file = conf_path + "/" + configFile;
 
-#if PLATFORM == PLATFORM_WINDOWS
+#if AC_PLATFORM == AC_PLATFORM_WINDOWS
         cfg_file = configFile;
 #endif
         std::string cfg_def_file = cfg_file + ".dist";
@@ -1197,7 +1197,7 @@ void World::LoadConfigSettings(bool reload)
     if (dataPath.empty() || (dataPath.at(dataPath.length()-1) != '/' && dataPath.at(dataPath.length()-1) != '\\'))
         dataPath.push_back('/');
 
-#if PLATFORM == PLATFORM_UNIX || PLATFORM == PLATFORM_APPLE
+#if AC_PLATFORM == AC_PLATFORM_UNIX || AC_PLATFORM == AC_PLATFORM_APPLE
     if (dataPath[0] == '~')
     {
         const char* home = getenv("HOME");
@@ -1328,7 +1328,11 @@ void World::LoadConfigSettings(bool reload)
     m_int_configs[CONFIG_AFK_PREVENT_LOGOUT] = sConfigMgr->GetIntDefault("PreventAFKLogout", 0);
 
     // Preload all grids of all non-instanced maps
-    m_bool_configs[CONFIG_PRELOAD_ALL_NON_INSTANCED_MAP_GRIDS] = sConfigMgr->GetIntDefault("PreloadAllNonInstancedMapGrids", false);
+    m_bool_configs[CONFIG_PRELOAD_ALL_NON_INSTANCED_MAP_GRIDS] = sConfigMgr->GetBoolDefault("PreloadAllNonInstancedMapGrids", false);
+
+    // ICC buff override
+    m_int_configs[CONFIG_ICC_BUFF_HORDE] = sConfigMgr->GetIntDefault("ICC.Buff.Horde", 73822);
+    m_int_configs[CONFIG_ICC_BUFF_ALLIANCE] = sConfigMgr->GetIntDefault("ICC.Buff.Alliance", 73828);
 
     // call ScriptMgr if we're reloading the configuration
     sScriptMgr->OnAfterConfigLoad(reload);

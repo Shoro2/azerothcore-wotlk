@@ -29,13 +29,13 @@ or logoff the server.
 - Type: Player/Server
 - Script: CustomLogin
 - Config: Yes
-    - Enable Module
-    - Enable Module Announce
-    - Enable Announce Player Login/Logoff
-    - Enable Starting Gear for new players
-    - Enable Additional Weapon Skills for new players
-    - Enable Special Abilities for new players
-    - Enable Reputation Boost for new players
+- Enable Module
+- Enable Module Announce
+- Enable Announce Player Login/Logoff
+- Enable Starting Gear for new players
+- Enable Additional Weapon Skills for new players
+- Enable Special Abilities for new players
+- Enable Reputation Boost for new players
 - SQL: No
 
 
@@ -521,5 +521,5 @@ public:
 void AddCustomLoginScripts()
 {
 	new CustomLoginWorld();
-    new CustomLogin();
+	new CustomLogin();
 }

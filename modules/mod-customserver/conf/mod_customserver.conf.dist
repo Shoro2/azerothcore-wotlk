@@ -1,15 +1,65 @@
 [worldserver]
-
+###################################################################################################
+# Credits to:
+#     ____    __                                         ____                           
+#    /\  _`\ /\ \__                  __                 /\  _`\                         
+#    \ \,\L\_\ \ ,_\  __  __     __ /\_\     __      ___\ \ \/\_\    ___   _ __    __   
+#     \/_\__ \\ \ \/ /\ \/\ \  /'_ `\/\ \  /'__`\  /' _ `\ \ \/_/_  / __`\/\`'__\/'__`\ 
+#       /\ \L\ \ \ \_\ \ \_\ \/\ \L\ \ \ \/\ \L\.\_/\ \/\ \ \ \L\ \/\ \L\ \ \ \//\  __/ 
+#       \ `\____\ \__\\/`____ \ \____ \ \_\ \__/.\_\ \_\ \_\ \____/\ \____/\ \_\\ \____\
+#        \/_____/\/__/ `/___/> \/___L\ \/_/\/__/\/_/\/_/\/_/\/___/  \/___/  \/_/ \/____/
+#                         /\___/ /\____/                                                
+#                         \/__/  \_/__/          http://stygianthebest.github.io                                         
 ###################################################################################################
 #	CUSTOM SERVER
 ###################################################################################################
-
-# Announce the module when the player logs in?
+#
+#  Announce the module when the player logs in?
+#  Enable : 1
+#  Disable: 0
 
 CustomServer.Announce = 1
 
-# Fireworks go off when the player levels up at specific intervals
-# Intervals: 5, 10, 20, 30, 40, 50, 60, 70, 80
-# Enable the module? (1: true | 0: false)
 
-Custom.FireworkLevels = 1
+###################################################################################################
+#  FIREWORKS ON LEVEL-UP
+###################################################################################################
+#
+# 	Fireworks go off when the player levels up at specific intervals
+# 	Intervals: 5, 10, 20, 30, 40, 50, 60, 70, 80
+# 	Enable the module? (1: true | 0: false
+#
+
+FireworkLevels = 0
+
+
+###################################################################################################
+#  CORE MOD - DUNGEON CHECKPOINTS
+###################################################################################################
+#
+#    DungeonCheckpoints
+#        Description: Allows players to appear at the last boss killed after dying in an dungeon.
+#        Default:     1 - Enabled
+#                     0 - Disabled
+#
+
+DungeonCheckpoints = 1
+
+
+###################################################################################################
+#  CORE MOD - TRACK BOTH RESOURCES
+###################################################################################################
+#
+#     AllowTrackBothResources
+#        Description: Allows players to track herbs and minerals at the same time (if they have the skills)
+#        Default:     0 - (Do not allow)
+#                     1 - (Allow)
+#
+#        Note:        The following are client limitations and cannot be coded for:
+#                     * The minimap tracking icon will display whichever skill is activated second.
+#                     * The minimap tracking list will only show a check mark next to the last skill activated (sometimes this
+#                       bugs out and doesn't switch the check mark. It has no effect on the actual tracking though).
+#                     * The minimap dots are yellow for both resources.
+#
+
+#TODO# AllowTrackBothResources = 1

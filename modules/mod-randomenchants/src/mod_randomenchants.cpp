@@ -51,7 +51,7 @@ public:
         if ((Quality > 5 && Quality < 0)/*eliminates enchanting anything that isn't a recognized quality*/ || (Class != 2 && Class != 4)/*eliminates enchanting anything but weapons/armor*/)
             return;
         int slotRand[3] = { -1, -1, -1 };
-        // überprüfen
+        // Ã¼berprÃ¼fen
         uint32 slotEnch[3] = { 0, 1, 5 };
 		ChatHandler chathandle = ChatHandler(player->GetSession());
 		chathandle.PSendSysMessage("req lvl: %d", Level);

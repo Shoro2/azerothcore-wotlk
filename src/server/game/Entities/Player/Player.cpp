@@ -22,9 +22,11 @@
 #include "Chat.h"
 #include "Common.h"
 #include "ConditionMgr.h"
+#include "Config.h"
 #include "CreatureAI.h"
 #include "DatabaseEnv.h"
 #include "DisableMgr.h"
+#include "DungeonCheckpoints.h"
 #include "Formulas.h"
 #include "GameEventMgr.h"
 #include "GossipDef.h"
@@ -5632,20 +5634,46 @@ void Player::RepopAtGraveyard()
     // and don't show spirit healer location
     if (ClosestGrave)
     {
-        TeleportTo(ClosestGrave->Map, ClosestGrave->x, ClosestGrave->y, ClosestGrave->z, GetOrientation());
-        if (isDead())                                        // not send if alive, because it used in TeleportTo()
+        std::string conf_path = _CONF_DIR;
+        std::string cfg_file = conf_path + "mod_customserver.conf";
+        sConfigMgr->LoadMore(cfg_file.c_str());
+        if (sConfigMgr->GetBoolDefault("DungeonCheckpoints", true))
         {
-            WorldPacket data(SMSG_DEATH_RELEASE_LOC, 4*4);  // show spirit healer position on minimap
-            data << ClosestGrave->Map;
-            data << ClosestGrave->x;
-            data << ClosestGrave->y;
-            data << ClosestGrave->z;
-            GetSession()->SendPacket(&data);
+            // If in a dungeon or raid check for an existing spawn point
+            // If spaw point found ressurect there
+            if (sDynRes->IsInDungeonOrRaid(this) && sDynRes->CheckForSpawnPoint(this))
+                sDynRes->DynamicResurrection(this);
+            else
+            {
+                TeleportTo(ClosestGrave->Map, ClosestGrave->x, ClosestGrave->y, ClosestGrave->z, GetOrientation());
+                if (isDead())                                        // not send if alive, because it used in TeleportTo()
+                {
+                    WorldPacket data(SMSG_DEATH_RELEASE_LOC, 4 * 4);  // show spirit healer position on minimap
+                    data << ClosestGrave->Map;
+                    data << ClosestGrave->x;
+                    data << ClosestGrave->y;
+                    data << ClosestGrave->z;
+                    GetSession()->SendPacket(&data);
+                }
+            }
+        }
+        else
+        {
+            TeleportTo(ClosestGrave->Map, ClosestGrave->x, ClosestGrave->y, ClosestGrave->z, GetOrientation());
+            if (isDead())                                        // not send if alive, because it used in TeleportTo()
+            {
+                WorldPacket data(SMSG_DEATH_RELEASE_LOC, 4 * 4);  // show spirit healer position on minimap
+                data << ClosestGrave->Map;
+                data << ClosestGrave->x;
+                data << ClosestGrave->y;
+                data << ClosestGrave->z;
+                GetSession()->SendPacket(&data);
+            }
         }
     }
     else if (GetPositionZ() < GetMap()->GetMinHeight(GetPositionX(), GetPositionY()))
         TeleportTo(m_homebindMapId, m_homebindX, m_homebindY, m_homebindZ, GetOrientation());
-
+    // #StygianCore (#SCMOD - Dungeon Checkpoints/Dynamic Resurrection)
     RemoveFlag(PLAYER_FLAGS, PLAYER_FLAGS_IS_OUT_OF_BOUNDS);
 }
 

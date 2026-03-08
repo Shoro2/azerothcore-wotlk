@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """
-Copy specific spells by ID from a source Spell.dbc into a new target Spell.dbc.
+Copy specific spells by ID from a source Spell.dbc and append them into an
+existing target Spell.dbc. The target keeps all its existing spells and gets
+the imported ones added. If a spell ID already exists in the target, it is
+skipped (use --overwrite to replace it).
 
 Usage:
     python3 copy_spells_dbc.py <source.dbc> <target.dbc> <spell_id> [spell_id ...]
@@ -9,6 +12,7 @@ Usage:
 Examples:
     python3 copy_spells_dbc.py Spell.dbc SpellOut.dbc 133 116 5143
     python3 copy_spells_dbc.py Spell.dbc SpellOut.dbc --file spell_ids.txt
+    python3 copy_spells_dbc.py Spell.dbc SpellOut.dbc --overwrite --file spell_ids.txt
 
 The id list file should contain one spell ID per line (blank lines and
 lines starting with # are ignored).
@@ -85,77 +89,76 @@ SPELL_FMT = (
 )
 
 
-def write_dbc(path, field_count, record_size, records, source_string_table):
-    """Write selected records into a fresh DBC file, rebuilding the string table
-    to only contain strings referenced by the copied spells."""
+def remap_record_strings(record_data, old_string_table, new_string_table, offset_map):
+    """Remap all string offsets in a record into a new string table.
+    Strings not yet in the new table are appended automatically."""
+    rec = bytearray(record_data)
+    pos = 0
+    for ch in SPELL_FMT:
+        if ch == "s":
+            old_off = struct.unpack_from("<I", rec, pos)[0]
+            if old_off not in offset_map:
+                s = extract_string(old_string_table, old_off)
+                new_off = len(new_string_table)
+                offset_map[old_off] = new_off
+                new_string_table.extend(s)
+                new_string_table.append(0)
+            struct.pack_into("<I", rec, pos, offset_map[old_off])
+            pos += 4
+        elif ch in ("n", "i", "f", "x"):
+            pos += 4
+        elif ch in ("X", "b"):
+            pos += 1
+    return bytes(rec)
 
-    # Collect all referenced string offsets from selected records
-    all_offsets = set()
-    for rec in records:
-        all_offsets |= collect_string_offsets(rec, SPELL_FMT)
-    all_offsets.discard(0)  # offset 0 is always the empty string
 
-    # Build a new compact string table and offset mapping
-    new_string_table = bytearray(b"\x00")  # offset 0 = empty string
-    offset_map = {0: 0}
-    for old_off in sorted(all_offsets):
-        s = extract_string(source_string_table, old_off)
-        new_off = len(new_string_table)
-        offset_map[old_off] = new_off
-        new_string_table.extend(s)
-        new_string_table.append(0)
-
-    # Rewrite records with remapped string offsets
-    new_records = []
-    for rec in records:
-        rec = bytearray(rec)
-        pos = 0
-        for ch in SPELL_FMT:
-            if ch == "s":
-                old_off = struct.unpack_from("<I", rec, pos)[0]
-                struct.pack_into("<I", rec, pos, offset_map.get(old_off, 0))
-                pos += 4
-            elif ch in ("n", "i", "f", "x"):
-                pos += 4
-            elif ch in ("X", "b"):
-                pos += 1
-        new_records.append(bytes(rec))
-
-    # Write the file
+def write_dbc(path, field_count, record_size, all_records, string_table):
+    """Write a complete DBC file from a list of (record_bytes) and a string table."""
     header = struct.pack(
         DBC_HEADER_FORMAT,
         DBC_MAGIC,
-        len(new_records),
+        len(all_records),
         field_count,
         record_size,
-        len(new_string_table),
+        len(string_table),
     )
 
     with open(path, "wb") as f:
         f.write(header)
-        for rec in new_records:
+        for rec in all_records:
             f.write(rec)
-        f.write(new_string_table)
+        f.write(string_table)
 
-    print(f"Wrote {len(new_records)} spell(s) to {path} "
-          f"({DBC_HEADER_SIZE + len(new_records) * record_size + len(new_string_table)} bytes)")
+    total = DBC_HEADER_SIZE + len(all_records) * record_size + len(string_table)
+    print(f"Wrote {len(all_records)} spell(s) to {path} ({total} bytes)")
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Copy specific spells from a source Spell.dbc into a new Spell.dbc."
+        description="Copy specific spells from a source Spell.dbc into a target Spell.dbc "
+        "(existing spells in the target are preserved)."
     )
     parser.add_argument("source", help="Path to source Spell.dbc")
-    parser.add_argument("target", help="Path to output Spell.dbc")
-    parser.add_argument("spell_ids", nargs="*", type=int, help="Spell IDs to copy")
+    parser.add_argument("target", help="Path to target Spell.dbc (will be updated in-place)")
+    parser.add_argument("spell_ids", nargs="*", type=int,
+                        help="Spell IDs to import (can appear anywhere on the command line)")
     parser.add_argument(
         "--file", "-f", dest="id_file",
         help="Text file with spell IDs (one per line, # comments allowed)",
     )
-    args = parser.parse_args()
+    parser.add_argument(
+        "--overwrite", action="store_true",
+        help="Overwrite spells that already exist in the target",
+    )
+    args, extra = parser.parse_known_args()
 
-    # Collect spell IDs
+    # Collect spell IDs (from positional args + any trailing numbers)
     wanted = set(args.spell_ids or [])
+    for val in extra:
+        try:
+            wanted.add(int(val))
+        except ValueError:
+            parser.error(f"unrecognized argument: {val}")
     if args.id_file:
         for line in Path(args.id_file).read_text().splitlines():
             line = line.strip()
@@ -168,26 +171,75 @@ def main():
     if not wanted:
         parser.error("No spell IDs specified. Provide IDs as arguments or via --file.")
 
-    print(f"Reading {args.source} ...")
-    dbc = read_dbc(args.source)
-    print(f"  {len(dbc['records'])} spells in source, record size {dbc['record_size']} bytes")
+    # Read source DBC
+    print(f"Reading source: {args.source} ...")
+    source = read_dbc(args.source)
+    print(f"  {len(source['records'])} spells, record size {source['record_size']} bytes")
 
-    # Find requested spells
-    found = []
-    missing = []
-    for sid in sorted(wanted):
-        if sid in dbc["records"]:
-            found.append(dbc["records"][sid])
-        else:
-            missing.append(sid)
+    # Read target DBC
+    target_path = Path(args.target)
+    if not target_path.exists():
+        sys.exit(f"Error: target file {args.target} does not exist.")
 
+    print(f"Reading target: {args.target} ...")
+    target = read_dbc(args.target)
+    print(f"  {len(target['records'])} spells, record size {target['record_size']} bytes")
+
+    if source["record_size"] != target["record_size"]:
+        sys.exit("Error: source and target have different record sizes — incompatible DBC versions.")
+
+    # Find requested spells in source
+    missing = [sid for sid in sorted(wanted) if sid not in source["records"]]
     if missing:
-        print(f"Warning: {len(missing)} spell(s) not found: {missing}", file=sys.stderr)
+        print(f"Warning: {len(missing)} spell(s) not found in source: {missing}", file=sys.stderr)
 
-    if not found:
+    to_import = {sid: source["records"][sid] for sid in sorted(wanted) if sid in source["records"]}
+    if not to_import:
         sys.exit("Error: none of the requested spells were found in the source DBC.")
 
-    write_dbc(args.target, dbc["field_count"], dbc["record_size"], found, dbc["string_table"])
+    # Merge: start with the target's string table and remap imported records into it
+    merged_string_table = bytearray(target["string_table"])
+    # Build an initial offset_map with identity mapping for target strings (they stay as-is)
+    source_offset_map = {}  # old source offset -> new offset in merged table
+
+    skipped = []
+    added = []
+    overwritten = []
+
+    # Start with all target records (keyed by spell ID for easy replacement)
+    merged_records = dict(target["records"])
+
+    for sid, rec in to_import.items():
+        if sid in merged_records and not args.overwrite:
+            skipped.append(sid)
+            continue
+
+        # Remap source record strings into the merged string table
+        remapped = remap_record_strings(
+            rec, source["string_table"], merged_string_table, source_offset_map
+        )
+
+        if sid in merged_records:
+            overwritten.append(sid)
+        else:
+            added.append(sid)
+        merged_records[sid] = remapped
+
+    if skipped:
+        print(f"Skipped {len(skipped)} spell(s) already in target (use --overwrite): {skipped}")
+    if overwritten:
+        print(f"Overwritten {len(overwritten)} spell(s): {overwritten}")
+    if added:
+        print(f"Added {len(added)} spell(s): {added}")
+
+    if not added and not overwritten:
+        print("Nothing to do — all requested spells already exist in target.")
+        return
+
+    # Write merged DBC sorted by spell ID
+    final_records = [merged_records[sid] for sid in sorted(merged_records)]
+    write_dbc(args.target, target["field_count"], target["record_size"],
+              final_records, bytes(merged_string_table))
     print("Done.")
 
 

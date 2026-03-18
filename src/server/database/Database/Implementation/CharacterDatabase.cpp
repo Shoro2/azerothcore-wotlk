@@ -622,6 +622,26 @@ void CharacterDatabaseConnection::DoPrepareStatements()
     // world_state
     PrepareStatement(CHAR_SEL_WORLD_STATE, "SELECT Id, Data FROM world_state", CONNECTION_SYNCH);
     PrepareStatement(CHAR_REP_WORLD_STATE, "REPLACE INTO world_state (Id, Data) VALUES(?, ?)", CONNECTION_ASYNC);
+
+    // mod-paragon
+    PrepareStatement(CHAR_SEL_PARAGON_LEVEL, "SELECT `level` FROM `character_paragon` WHERE `accountID` = ?", CONNECTION_SYNCH);
+    PrepareStatement(CHAR_SEL_PARAGON_LEVEL_XP, "SELECT `level`, `xp` FROM `character_paragon` WHERE `accountID` = ?", CONNECTION_SYNCH);
+    PrepareStatement(CHAR_INS_PARAGON, "INSERT INTO `character_paragon` (`accountID`, `level`, `xp`) VALUES (?, 1, 100)", CONNECTION_ASYNC);
+    PrepareStatement(CHAR_UPD_PARAGON_LEVELUP, "UPDATE `character_paragon` SET `xp` = ?, `level` = `level` + 1 WHERE `accountID` = ?", CONNECTION_ASYNC);
+    PrepareStatement(CHAR_UPD_PARAGON_XP, "UPDATE `character_paragon` SET `xp` = `xp` - ? WHERE `accountID` = ?", CONNECTION_ASYNC);
+    PrepareStatement(CHAR_SEL_PARAGON_POINTS, "SELECT `pstrength`, `pintellect`, `pagility`, `pspirit`, `pstamina`, `phaste`, `parmpen`, `pspellpower`, `pcrit`, `pmspeed`, `pmreg`, `phit`, `pblock`, `pexpertise`, `pparry`, `pdodge` FROM `character_paragon_points` WHERE `characterID` = ?", CONNECTION_SYNCH);
+    PrepareStatement(CHAR_INS_PARAGON_POINTS, "INSERT INTO `character_paragon_points` (`characterID`, `pstrength`, `pintellect`, `pagility`, `pspirit`, `pstamina`, `phaste`, `parmpen`, `pspellpower`, `pcrit`, `pmspeed`, `pmreg`, `phit`, `pblock`, `pexpertise`, `pparry`, `pdodge`) VALUES (?, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)", CONNECTION_ASYNC);
+    PrepareStatement(CHAR_UPD_PARAGON_POINTS_RESET, "UPDATE `character_paragon_points` SET `pstrength` = 0, `pintellect` = 0, `pagility` = 0, `pspirit` = 0, `pstamina` = 0, `phaste` = 0, `parmpen` = 0, `pspellpower` = 0, `pcrit` = 0, `pmspeed` = 0, `pmreg` = 0, `phit` = 0, `pblock` = 0, `pexpertise` = 0, `pparry` = 0, `pdodge` = 0 WHERE `characterID` = ?", CONNECTION_ASYNC);
+
+    // mod-paragon-itemgen
+    PrepareStatement(CHAR_SEL_PARAGON_ROLE, "SELECT `role`, `mainStat` FROM `character_paragon_role` WHERE `characterID` = ?", CONNECTION_SYNCH);
+    PrepareStatement(CHAR_INS_PARAGON_ROLE, "INSERT INTO `character_paragon_role` (`characterID`, `role`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `role` = ?", CONNECTION_ASYNC);
+    PrepareStatement(CHAR_UPD_PARAGON_ROLE_MAINSTAT, "INSERT INTO `character_paragon_role` (`characterID`, `mainStat`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `mainStat` = ?", CONNECTION_ASYNC);
+    PrepareStatement(CHAR_SEL_PARAGON_SPEC, "SELECT `specId` FROM `character_paragon_spec` WHERE `characterId` = ?", CONNECTION_SYNCH);
+    PrepareStatement(CHAR_REP_PARAGON_SPEC, "REPLACE INTO `character_paragon_spec` (`characterId`, `specId`) VALUES (?, ?)", CONNECTION_ASYNC);
+    PrepareStatement(CHAR_REP_PARAGON_ITEM, "REPLACE INTO `character_paragon_item` (`itemGuid`, `paragonLevel`, `role`, `mainStat`, `combatRating1`, `combatRating2`, `statAmount`, `cursed`, `passiveSpellEnchantId`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", CONNECTION_ASYNC);
+    PrepareStatement(CHAR_SEL_PARAGON_ITEM_LEVEL, "SELECT `paragonLevel` FROM `character_paragon_item` WHERE `itemGuid` = ?", CONNECTION_SYNCH);
+    PrepareStatement(CHAR_SEL_PARAGON_LEVEL_BY_CHAR, "SELECT cp.`level` FROM `character_paragon` cp INNER JOIN `characters` c ON c.`account` = cp.`accountID` WHERE c.`guid` = ?", CONNECTION_SYNCH);
 }
 
 CharacterDatabaseConnection::CharacterDatabaseConnection(MySQLConnectionInfo& connInfo) : MySQLConnection(connInfo)

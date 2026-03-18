@@ -117,6 +117,9 @@ enum WorldDatabaseStatements : uint32
     WORLD_INS_GAMEOBJECT_ADDON,
     WORLD_UPD_VERSION,
 
+    // mod-paragon-itemgen
+    WORLD_SEL_PARAGON_SPEC_SPELL_ASSIGN,
+
     MAX_WORLDDATABASE_STATEMENTS
 };
 

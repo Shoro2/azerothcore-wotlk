@@ -111,6 +111,9 @@ void WorldDatabaseConnection::DoPrepareStatements()
     // 0: uint8
     PrepareStatement(WORLD_SEL_REQ_XP, "SELECT Experience FROM player_xp_for_level WHERE Level = ?", CONNECTION_SYNCH);
     PrepareStatement(WORLD_UPD_VERSION, "UPDATE version SET core_version = ?, core_revision = ?", CONNECTION_ASYNC);
+
+    // mod-paragon-itemgen
+    PrepareStatement(WORLD_SEL_PARAGON_SPEC_SPELL_ASSIGN, "SELECT a.`specId`, a.`enchantmentId`, p.`name`, a.`weight`, p.`minParagonLevel`, p.`minItemLevel` FROM `paragon_spec_spell_assign` a INNER JOIN `paragon_passive_spell_pool` p ON a.`enchantmentId` = p.`enchantmentId` ORDER BY a.`specId`, a.`enchantmentId`", CONNECTION_SYNCH);
 }
 
 WorldDatabaseConnection::WorldDatabaseConnection(MySQLConnectionInfo& connInfo) : MySQLConnection(connInfo)

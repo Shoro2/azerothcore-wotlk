@@ -30,8 +30,11 @@ DBC_MAGIC = b"WDBC"
 
 def read_dbc(path):
     """Read a Spell.dbc and return header info, raw records keyed by spell ID,
-    and the full string table."""
+    and the full string table.  Validates file integrity before returning."""
     data = Path(path).read_bytes()
+
+    if len(data) < DBC_HEADER_SIZE:
+        sys.exit(f"Error: {path} is too small to be a valid DBC file ({len(data)} bytes)")
 
     magic, record_count, field_count, record_size, string_table_size = struct.unpack_from(
         DBC_HEADER_FORMAT, data, 0
@@ -39,16 +42,37 @@ def read_dbc(path):
     if magic != DBC_MAGIC:
         sys.exit(f"Error: {path} is not a valid DBC file (magic: {magic!r})")
 
+    expected_size = DBC_HEADER_SIZE + record_count * record_size + string_table_size
+    if len(data) != expected_size:
+        sys.exit(
+            f"Error: {path} is corrupt — file size {len(data)} does not match "
+            f"expected {expected_size} (header claims {record_count} records × "
+            f"{record_size} bytes + {string_table_size} string table)"
+        )
+
     records_start = DBC_HEADER_SIZE
     string_table_start = records_start + record_count * record_size
     string_table = data[string_table_start : string_table_start + string_table_size]
 
+    if string_table_size > 0 and string_table[0:1] != b"\x00":
+        sys.exit(f"Error: {path} is corrupt — string table does not start with a null byte")
+
     records = {}
+    duplicates = 0
     for i in range(record_count):
         offset = records_start + i * record_size
         record_data = data[offset : offset + record_size]
         spell_id = struct.unpack_from("<I", record_data, 0)[0]
+        if spell_id in records:
+            duplicates += 1
         records[spell_id] = record_data
+
+    if duplicates > 0:
+        sys.exit(
+            f"Error: {path} is corrupt — found {duplicates} duplicate spell ID(s) "
+            f"across {record_count} records (only {len(records)} unique). "
+            f"Restore from a clean backup before proceeding."
+        )
 
     return {
         "field_count": field_count,
@@ -80,7 +104,8 @@ def extract_string(string_table, offset):
     return string_table[offset:end]
 
 
-# Spell.dbc format string from DBCfmt.h (234 chars, 936 bytes per record)
+# Spell.dbc format string — must exactly match SpellEntryfmt from DBCfmt.h
+# 234 fields, 936 bytes per record (all fields are 4 bytes: n/i/f/s/x)
 SPELL_FMT = (
     "niiiiiiiiiiiixixiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiifx"
     "iiiiiiiiiiiiiiiiiiiiiiiiiiiifffiiiiiiiiiiiiiiiiiiiiifffiiiiiiiiiiiiiiifff"
@@ -132,6 +157,11 @@ def write_dbc(path, field_count, record_size, all_records, string_table):
     total = DBC_HEADER_SIZE + len(all_records) * record_size + len(string_table)
     print(f"Wrote {len(all_records)} spell(s) to {path} ({total} bytes)")
 
+    # Verify written file integrity
+    actual_size = Path(path).stat().st_size
+    if actual_size != total:
+        sys.exit(f"CRITICAL: Written file size {actual_size} != expected {total} — write error!")
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -171,6 +201,10 @@ def main():
     if not wanted:
         parser.error("No spell IDs specified. Provide IDs as arguments or via --file.")
 
+    # Safety: prevent accidental self-overwrite
+    if Path(args.source).resolve() == Path(args.target).resolve():
+        sys.exit("Error: source and target resolve to the same file. Use different paths.")
+
     # Read source DBC
     print(f"Reading source: {args.source} ...")
     source = read_dbc(args.source)
@@ -187,6 +221,14 @@ def main():
 
     if source["record_size"] != target["record_size"]:
         sys.exit("Error: source and target have different record sizes — incompatible DBC versions.")
+
+    # Verify SPELL_FMT matches the actual record size
+    fmt_bytes = sum(4 for c in SPELL_FMT if c in "nifsx") + sum(1 for c in SPELL_FMT if c in "Xb")
+    if fmt_bytes != source["record_size"]:
+        sys.exit(
+            f"Error: SPELL_FMT calculates to {fmt_bytes} bytes but DBC has "
+            f"{source['record_size']}-byte records. Update SPELL_FMT to match DBCfmt.h."
+        )
 
     # Find requested spells in source
     missing = [sid for sid in sorted(wanted) if sid not in source["records"]]

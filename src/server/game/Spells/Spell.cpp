@@ -5546,7 +5546,9 @@ void Spell::TakeReagents()
         if (m_targets.GetItemTargetEntry() == itemid)
             m_targets.SetItemTarget(nullptr);
 
-        p_caster->DestroyItemCount(itemid, itemcount, true);
+        sScriptMgr->OnPlayerConsumeReagent(p_caster, itemid, itemcount);
+        if (itemcount > 0)
+            p_caster->DestroyItemCount(itemid, itemcount, true);
     }
 }
 
@@ -7322,7 +7324,12 @@ SpellCastResult Spell::CheckItems()
                     }
                 }
                 if (!player->HasItemCount(itemid, itemcount))
-                    return SPELL_FAILED_REAGENTS;
+                {
+                    bool hasEnough = false;
+                    sScriptMgr->OnPlayerCheckReagent(player, itemid, itemcount, hasEnough);
+                    if (!hasEnough)
+                        return SPELL_FAILED_REAGENTS;
+                }
             }
         }
 

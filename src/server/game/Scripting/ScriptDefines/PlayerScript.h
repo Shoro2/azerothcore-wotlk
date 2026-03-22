@@ -210,8 +210,6 @@ enum PlayerHook
     PLAYERHOOK_ON_SEND_LIST_INVENTORY,
     PLAYERHOOK_ON_GIVE_REPUTATION,
     PLAYERHOOK_ON_GET_REPUTATION_PRICE_DISCOUNT,
-    PLAYERHOOK_ON_CHECK_REAGENT,
-    PLAYERHOOK_ON_CONSUME_REAGENT,
     PLAYERHOOK_END
 };
 
@@ -823,27 +821,6 @@ public:
      */
     virtual void OnPlayerGetReputationPriceDiscount(Player const* /*player*/, FactionTemplateEntry const* /*factionTemplate*/, float& /*discount*/) {}
 
-    /**
-     * @brief Called during CheckItems() for each spell reagent.
-     *        Allows modules to provide reagents from external storage.
-     *
-     * @param player The casting player
-     * @param itemId The reagent item entry
-     * @param itemCount The required amount
-     * @param hasEnough Set to true if external storage can cover the deficit
-     */
-    virtual void OnPlayerCheckReagent(Player* /*player*/, uint32 /*itemId*/, uint32 /*itemCount*/, bool& /*hasEnough*/) {}
-
-    /**
-     * @brief Called during TakeReagents() for each spell reagent before DestroyItemCount.
-     *        Allows modules to consume reagents from external storage first.
-     *        Reduce itemCount by the amount consumed externally; the remainder is destroyed from inventory.
-     *
-     * @param player The casting player
-     * @param itemId The reagent item entry
-     * @param itemCount[in,out] Amount still needed from inventory after external consumption
-     */
-    virtual void OnPlayerConsumeReagent(Player* /*player*/, uint32 /*itemId*/, uint32& /*itemCount*/) {}
 };
 
 #endif

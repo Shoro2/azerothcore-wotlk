@@ -925,15 +925,6 @@ void ScriptMgr::OnPlayerGetReputationPriceDiscount(Player const* player, Faction
     CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_GET_REPUTATION_PRICE_DISCOUNT, script->OnPlayerGetReputationPriceDiscount(player, factionTemplate, discount));
 }
 
-void ScriptMgr::OnPlayerCheckReagent(Player* player, uint32 itemId, uint32 itemCount, bool& hasEnough)
-{
-    CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_CHECK_REAGENT, script->OnPlayerCheckReagent(player, itemId, itemCount, hasEnough));
-}
-
-void ScriptMgr::OnPlayerConsumeReagent(Player* player, uint32 itemId, uint32& itemCount)
-{
-    CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_CONSUME_REAGENT, script->OnPlayerConsumeReagent(player, itemId, itemCount));
-}
 
 PlayerScript::PlayerScript(const char* name, std::vector<uint16> enabledHooks)
     : ScriptObject(name, PLAYERHOOK_END)

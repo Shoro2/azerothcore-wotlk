@@ -466,9 +466,6 @@ public: /* PlayerScript */
     void OnPlayerSendListInventory(Player* player, ObjectGuid vendorGuid, uint32& vendorEntry);
     void OnPlayerGetReputationPriceDiscount(Player const* player, Creature const* creature, float& discount);
     void OnPlayerGetReputationPriceDiscount(Player const* player, FactionTemplateEntry const* factionTemplate, float& discount);
-    void OnPlayerCheckReagent(Player* player, uint32 itemId, uint32 itemCount, bool& hasEnough);
-    void OnPlayerConsumeReagent(Player* player, uint32 itemId, uint32& itemCount);
-
     // Anti cheat
     void AnticheatSetCanFlybyServer(Player* player, bool apply);
     void AnticheatSetUnderACKmount(Player* player);

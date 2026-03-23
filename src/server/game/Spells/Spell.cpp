@@ -3532,12 +3532,16 @@ SpellCastResult Spell::prepare(SpellCastTargets const* targets, AuraEffect const
     // (even if they are interrupted on moving, spells with almost immediate effect get to have their effect processed before movement interrupter kicks in)
     if ((m_spellInfo->IsChanneled() || m_casttime) && m_caster->IsPlayer() && m_caster->isMoving() && m_spellInfo->InterruptFlags & SPELL_INTERRUPT_FLAG_MOVEMENT && !IsTriggered())
     {
-        // 1. Has casttime, 2. Or doesn't have flag to allow action during channel
-        if (m_casttime || !m_spellInfo->IsActionAllowedChannel())
+        // Custom: skip movement interrupt if caster has "Cast While Moving" aura (901100)
+        if (!m_caster->HasAura(901100))
         {
-            SendCastResult(SPELL_FAILED_MOVING);
-            finish(false);
-            return SPELL_FAILED_MOVING;
+            // 1. Has casttime, 2. Or doesn't have flag to allow action during channel
+            if (m_casttime || !m_spellInfo->IsActionAllowedChannel())
+            {
+                SendCastResult(SPELL_FAILED_MOVING);
+                finish(false);
+                return SPELL_FAILED_MOVING;
+            }
         }
     }
 
@@ -4387,9 +4391,13 @@ void Spell::update(uint32 difftime)
             m_caster->isMoving() && (m_spellInfo->InterruptFlags & SPELL_INTERRUPT_FLAG_MOVEMENT) && m_spellState == SPELL_STATE_PREPARING &&
             (m_spellInfo->Effects[0].Effect != SPELL_EFFECT_STUCK || !m_caster->HasUnitMovementFlag(MOVEMENTFLAG_FALLING_FAR)))
     {
-        // don't cancel for melee, autorepeat, triggered and instant spells
-        if (!IsNextMeleeSwingSpell() && !IsAutoRepeat() && !IsTriggered())
-            cancel(true);
+        // Custom: skip movement interrupt if caster has "Cast While Moving" aura (901100)
+        if (!m_caster->HasAura(901100))
+        {
+            // don't cancel for melee, autorepeat, triggered and instant spells
+            if (!IsNextMeleeSwingSpell() && !IsAutoRepeat() && !IsTriggered())
+                cancel(true);
+        }
     }
 
     switch (m_spellState)

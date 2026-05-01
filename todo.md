@@ -5,7 +5,6 @@
 
 ## Custom-Hooks
 
-- [ ] **(niedrig)** `CanCreateAuction`-Hook für mod-paragon-itemgen ergänzen: aktuell nicht verfügbar in AzerothCore. Wenn das Restriction-Feature wichtig wird, einen Player-Hook nach Pattern von `OnPlayerCheckReagent` einbauen (siehe `functions.md` für Vorgehen).
 - [ ] **(niedrig)** `OnPlayerCheckReagent` / `OnPlayerConsumeReagent` werden derzeit von keinem aktiven Modul mehr genutzt (mod-endless-storage ist auf reines Lua/AIO migriert). Code im Core lassen, aber als "verfügbar für künftige Nutzung" markieren — nicht entfernen.
 
 ## DBC

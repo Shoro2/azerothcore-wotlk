@@ -1,16 +1,16 @@
 # TODOs — azerothcore-wotlk (Fork)
 
-> Offene Aufgaben für diesen Fork (Custom-Erweiterungen über Upstream hinaus). Erledigte TODOs in `log.md` festhalten und hier entfernen.
-> **Wichtig**: hier nur **projekt-spezifische** TODOs — Upstream-AzerothCore-Issues gehören nicht hierher.
+> Open tasks for this fork (custom extensions beyond upstream). Record completed TODOs in `log.md` and remove them here.
+> **Important**: only **project-specific** TODOs here — upstream AzerothCore issues do not belong here.
 
-## Custom-Hooks
+## Custom hooks
 
-- [ ] **(niedrig)** `OnPlayerCheckReagent` / `OnPlayerConsumeReagent` werden derzeit von keinem aktiven Modul mehr genutzt (mod-endless-storage ist auf reines Lua/AIO migriert). Code im Core lassen, aber als "verfügbar für künftige Nutzung" markieren — nicht entfernen.
+- [ ] **(low)** `OnPlayerCheckReagent` / `OnPlayerConsumeReagent` are currently no longer used by any active module (mod-endless-storage has migrated to pure Lua/AIO). Leave the code in the core, but mark as "available for future use" — do not remove.
 
-## Upstream-Sync-Hygiene
+## Upstream sync hygiene
 
-- [ ] **(niedrig)** Periodische Upstream-Merges (alle 4-6 Wochen) — nur dokumentieren, keine Aufgabe für KI ohne Userwunsch. Letzter Sync: 2026-04-06.
+- [ ] **(low)** Periodic upstream merges (every 4-6 weeks) — only document, no task for AI without user request. Last sync: 2026-04-06.
 
-## Konvention
+## Convention
 
-Erledigte Items NICHT durchstreichen — entfernen und in `log.md` dokumentieren. Upstream-Issues gehören NICHT in diese Datei.
+Do NOT cross out completed items — remove them and document in `log.md`. Upstream issues do NOT belong in this file.

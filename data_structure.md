@@ -1,123 +1,123 @@
-# Datei- und Verzeichnisstruktur — azerothcore-wotlk (Fork)
+# File and directory structure — azerothcore-wotlk (Fork)
 
-> Dieser Repo ist ein Fork von `azerothcore/azerothcore-wotlk`. Die hier dokumentierten Pfade sind die **wichtigsten** für Custom-Arbeit — vollständige Auflistung des riesigen Trees wäre nicht hilfreich. Für Detail-Navigation: GitHub-Suche nutzen oder gezielt `Bash`/`Read` auf konkrete Pfade.
+> This repo is a fork of `azerothcore/azerothcore-wotlk`. The paths documented here are the **most important** for custom work — a complete listing of the huge tree would not be helpful. For detailed navigation: use GitHub search or run `Bash`/`Read` against specific paths.
 
-## Top-Level (Auszug)
+## Top level (excerpt)
 
 ```
 azerothcore-wotlk/
-├── .github/                                # PR-Templates, Workflows, CODEOWNERS
+├── .github/                                # PR templates, workflows, CODEOWNERS
 │   ├── workflows/                          # CI: codestyle, build (clang/gcc, macOS, Windows), modules
-│   ├── actions/                            # Composite-Actions
-│   └── README.md, SECURITY.md, ...         # GitHub-Standardfiles
-├── apps/                                   # Helper-Skripte (codestyle-cpp.py, codestyle-sql.py, db_assembler/, ci/)
-├── conf/                                   # Konfig-Templates (worldserver.conf.dist, authserver.conf.dist)
+│   ├── actions/                            # Composite actions
+│   └── README.md, SECURITY.md, ...         # GitHub standard files
+├── apps/                                   # Helper scripts (codestyle-cpp.py, codestyle-sql.py, db_assembler/, ci/)
+├── conf/                                   # Config templates (worldserver.conf.dist, authserver.conf.dist)
 ├── data/
 │   ├── sql/
-│   │   ├── base/db_world/                  # Initiales World-Schema (NICHT in PRs ändern!)
-│   │   ├── base/db_characters/             # Initiales Characters-Schema
-│   │   ├── base/db_auth/                   # Initiales Auth-Schema
-│   │   ├── updates/db_world/               # Gemergte SQL-Updates
-│   │   ├── updates/pending_db_world/       # **Pending Updates** — neue SQL-Files hier
+│   │   ├── base/db_world/                  # Initial world schema (DO NOT change in PRs!)
+│   │   ├── base/db_characters/             # Initial characters schema
+│   │   ├── base/db_auth/                   # Initial auth schema
+│   │   ├── updates/db_world/               # Merged SQL updates
+│   │   ├── updates/pending_db_world/       # **Pending updates** — new SQL files go here
 │   │   ├── updates/pending_db_characters/  # ...
 │   │   ├── updates/pending_db_auth/        # ...
-│   │   └── archive/                        # Historische archivierte Updates
-├── deps/                                   # Bundled Dependencies: boost, MySQL-client, OpenSSL, zlib, recastnav, fmt, argon2, jemalloc, ...
+│   │   └── archive/                        # Historical archived updates
+├── deps/                                   # Bundled dependencies: boost, MySQL client, OpenSSL, zlib, recastnav, fmt, argon2, jemalloc, ...
 ├── doc/
-│   ├── ConfigPolicy.md                     # Konfig-Policy-Doku
-│   ├── Logging.md                          # Logging-Framework-Doku
-│   └── changelog/                          # Upstream-Changelog
-├── env/                                    # Environment-spezifische Files (Docker, etc.)
-├── modules/                                # **Custom-Module-Slot** — hier liegen mod-paragon, mod-paragon-itemgen, etc. (Symlinks oder Clones)
+│   ├── ConfigPolicy.md                     # Config policy doc
+│   ├── Logging.md                          # Logging framework doc
+│   └── changelog/                          # Upstream changelog
+├── env/                                    # Environment-specific files (Docker, etc.)
+├── modules/                                # **Custom module slot** — mod-paragon, mod-paragon-itemgen, etc. live here (symlinks or clones)
 ├── src/
-│   ├── common/                             # Shared Libs (Networking, Crypto, Logging, Threading, Collision)
+│   ├── common/                             # Shared libs (networking, crypto, logging, threading, collision)
 │   ├── server/
 │   │   ├── apps/
-│   │   │   ├── authserver/                 # Auth-Executable
-│   │   │   └── worldserver/                # World-Executable
-│   │   ├── database/                       # DB-Abstraktion + Schema-Updater
-│   │   ├── game/                           # Kern-Spiellogik (~52 Subsysteme — siehe unten)
-│   │   ├── scripts/                        # Content (Bosse, Spells, Commands, Instanzen)
-│   │   └── shared/                         # Auth↔World-gemeinsamer Code
-│   └── test/                               # GTest-Unit-Tests (links gegen `game`-Lib)
-├── var/                                    # Runtime-Daten (zur Laufzeit erzeugt)
-├── bin/                                    # ggf. Helper-Binaries
-├── tools/                                  # ggf. Map-Extractor o.ä.
-├── CMakeLists.txt                          # Top-Level-Build
-├── PreLoad.cmake                           # CMake-Vorladung
-├── docker-compose.yml                      # Docker-Setup
-├── flake.nix / flake.lock                  # Nix-Setup (optional)
-├── install.sh, acore.sh, acore.json        # Helper-Scripts
-├── pull_request_template.md                # GitHub PR-Template
-├── CLAUDE.md                               # Projekt-spezifische KI-Doku
-├── log.md                                  # Custom-Commit-Log (modular)
-├── data_structure.md                       # Diese Datei
-└── functions.md                            # Mechanik-Referenz (Custom-Hooks etc.)
+│   │   │   ├── authserver/                 # Auth executable
+│   │   │   └── worldserver/                # World executable
+│   │   ├── database/                       # DB abstraction + schema updater
+│   │   ├── game/                           # Core game logic (~52 subsystems — see below)
+│   │   ├── scripts/                        # Content (bosses, spells, commands, instances)
+│   │   └── shared/                         # Auth↔World shared code
+│   └── test/                               # GTest unit tests (linked against `game` lib)
+├── var/                                    # Runtime data (created at runtime)
+├── bin/                                    # Optional helper binaries
+├── tools/                                  # Optional map extractor or similar
+├── CMakeLists.txt                          # Top-level build
+├── PreLoad.cmake                           # CMake preload
+├── docker-compose.yml                      # Docker setup
+├── flake.nix / flake.lock                  # Nix setup (optional)
+├── install.sh, acore.sh, acore.json        # Helper scripts
+├── pull_request_template.md                # GitHub PR template
+├── CLAUDE.md                               # Project-specific AI doc
+├── log.md                                  # Custom commit log (modular)
+├── data_structure.md                       # This file
+└── functions.md                            # Mechanics reference (custom hooks etc.)
 ```
 
-## `src/server/game/` — Kern-Subsysteme
+## `src/server/game/` — Core subsystems
 
-Wichtigste Verzeichnisse für Custom-Module-Arbeit:
+Most important directories for custom module work:
 
-| Pfad | Inhalt |
+| Path | Contents |
 |------|--------|
-| `Entities/` | `Player`, `Creature`, `Unit`, `Item`, `GameObject` (Kern-Klassen) |
-| `Spells/` | Spell-Mechaniken, `SpellMgr.h` (ProcFlags-Defines!), Aura-System |
-| `Scripting/ScriptDefines/` | Hook-Header: `PlayerScript.h`, `WorldScript.h`, `UnitScript.h`, ... |
-| `Scripting/ScriptMgr.{h,cpp}` | Globaler `ScriptMgr` — listet alle Hook-Typen |
-| `Handlers/` | Client-Packet-Handler (Methoden auf `WorldSession`) |
-| `Maps/` | Map-Management, Grid, Instancing |
-| `AI/` | Creature-AI-Framework |
-| `DataStores/` | DBC-Loading + Storage-Templates |
-| `Conditions/` | Condition-System für DB-Logic |
-| `Loot/` | Loot-Generierung |
-| `Globals/` | `ObjectMgr` und globale Caches |
-| `Server/` | `WorldSession`, `World`, Opcodes |
+| `Entities/` | `Player`, `Creature`, `Unit`, `Item`, `GameObject` (core classes) |
+| `Spells/` | Spell mechanics, `SpellMgr.h` (ProcFlags defines!), aura system |
+| `Scripting/ScriptDefines/` | Hook headers: `PlayerScript.h`, `WorldScript.h`, `UnitScript.h`, ... |
+| `Scripting/ScriptMgr.{h,cpp}` | Global `ScriptMgr` — lists all hook types |
+| `Handlers/` | Client packet handlers (methods on `WorldSession`) |
+| `Maps/` | Map management, grid, instancing |
+| `AI/` | Creature AI framework |
+| `DataStores/` | DBC loading + storage templates |
+| `Conditions/` | Condition system for DB logic |
+| `Loot/` | Loot generation |
+| `Globals/` | `ObjectMgr` and global caches |
+| `Server/` | `WorldSession`, `World`, opcodes |
 
 ## `src/server/scripts/` — Content
 
-| Pfad | Inhalt |
+| Path | Contents |
 |------|--------|
-| `Commands/cs_*.cpp` | GM-Commands |
-| `Spells/spell_*.cpp` | Klassen-spezifische SpellScripts (`spell_dk.cpp`, `spell_mage.cpp`, ...) |
-| `EasternKingdoms/`, `Kalimdor/`, `Northrend/`, `Outland/` | Zone/Dungeon/Raid-Scripts |
-| `Custom/` | Custom-User-Scripts (gitignored) |
+| `Commands/cs_*.cpp` | GM commands |
+| `Spells/spell_*.cpp` | Class-specific SpellScripts (`spell_dk.cpp`, `spell_mage.cpp`, ...) |
+| `EasternKingdoms/`, `Kalimdor/`, `Northrend/`, `Outland/` | Zone/dungeon/raid scripts |
+| `Custom/` | Custom user scripts (gitignored) |
 
-## `data/sql/` — SQL-Datei-Ablage
+## `data/sql/` — SQL file layout
 
-| Pfad | Verwendung |
+| Path | Use |
 |------|-----------|
-| `data/sql/base/<db>/` | Initiales Schema — **niemals in PRs editieren** (CI warnt + Maintainer-Approval nötig) |
-| `data/sql/updates/<db>/` | Gemergte Updates |
-| `data/sql/updates/pending_<db>/` | **Hier kommen neue SQL-Files rein** mit Random-Filename |
-| `data/sql/archive/` | Archivierte alte Updates |
+| `data/sql/base/<db>/` | Initial schema — **never edit in PRs** (CI warns + maintainer approval required) |
+| `data/sql/updates/<db>/` | Merged updates |
+| `data/sql/updates/pending_<db>/` | **New SQL files go here** with a random filename |
+| `data/sql/archive/` | Archived old updates |
 
-## Custom-Code in diesem Fork
+## Custom code in this fork
 
-Über die normale Upstream-Codebase hinaus hat dieser Fork:
+Beyond the regular upstream codebase, this fork has:
 
-- **2 zusätzliche PlayerScript-Hooks** — `OnPlayerCheckReagent` / `OnPlayerConsumeReagent` (für Crafting-Reagenz-Routing). Siehe `functions.md`.
-- **Custom Spell.dbc** unter `share/dbc/Spell.dbc` mit Custom-Spell-IDs (100xxx Auras, 900xxx Custom-Effekte, 950xxx Passives).
-- **Custom-Module** in `modules/` (mod-paragon, mod-paragon-itemgen, mod-loot-filter, mod-auto-loot, mod-endless-storage; ggf. weitere wie mod-custom-spells, mod-dungeon-challenge).
+- **2 additional PlayerScript hooks** — `OnPlayerCheckReagent` / `OnPlayerConsumeReagent` (for crafting reagent routing). See `functions.md`.
+- **Custom Spell.dbc** at `share/dbc/Spell.dbc` with custom spell IDs (100xxx auras, 900xxx custom effects, 950xxx passives).
+- **Custom modules** in `modules/` (mod-paragon, mod-paragon-itemgen, mod-loot-filter, mod-auto-loot, mod-endless-storage; possibly more like mod-custom-spells, mod-dungeon-challenge).
 
-## Größenhinweise
+## Size notes
 
-- **Riesiger Tree** — niemals den ganzen `src/`-Baum auflisten oder am Stück lesen. Gezielt grepen oder per Pfad lesen.
-- Einzelne Source-Files können >50 KB sein (`Player.cpp`, `Spell.cpp`, `Unit.cpp`). Mit `Read offset/limit` chunken.
-- DBC-Files in `share/dbc/` sind **binär** — niemals direkt lesen.
+- **Huge tree** — never list the full `src/` tree or read it as a whole. Grep specifically or read by path.
+- Individual source files may be >50 KB (`Player.cpp`, `Spell.cpp`, `Unit.cpp`). Chunk with `Read offset/limit`.
+- DBC files in `share/dbc/` are **binary** — never read directly.
 
-## CI-Workflows (im `.github/workflows/`)
+## CI workflows (in `.github/workflows/`)
 
-- `codestyle.yml` — C++-Codestyle + cppcheck (Trigger bei `src/`)
-- `sql-codestyle.yml` — SQL-Codestyle (Trigger bei `data/`)
-- `core-build-pch.yml` — Linux-Build mit PCH (clang-15 Ubuntu 22.04, clang-18 Ubuntu 24.04)
-- `core-build-nopch.yml` — ohne PCH (clang-15, clang-18, gcc-14)
-- `macos_build.yml`, `windows_build.yml` — OS-Kompatibilität
-- `core_modules_build.yml` — Modul-Compilation
+- `codestyle.yml` — C++ codestyle + cppcheck (triggered on `src/`)
+- `sql-codestyle.yml` — SQL codestyle (triggered on `data/`)
+- `core-build-pch.yml` — Linux build with PCH (clang-15 Ubuntu 22.04, clang-18 Ubuntu 24.04)
+- `core-build-nopch.yml` — without PCH (clang-15, clang-18, gcc-14)
+- `macos_build.yml`, `windows_build.yml` — OS compatibility
+- `core_modules_build.yml` — module compilation
 
-Alle Builds mit `-Werror`. Warnings sind Errors.
+All builds with `-Werror`. Warnings are errors.
 
-## Wo ist was nicht?
+## What is not where?
 
-- **Eluna ist kein Bestandteil dieses Cores** — wird als separates Modul (`mod-eluna`) eingebunden, hier nicht enthalten.
-- **AIO Framework ist kein Server-Code** — liegt in `share-public/AIO_Server/` und wird in das Eluna `lua_scripts/`-Verzeichnis kopiert.
+- **Eluna is not part of this core** — included as a separate module (`mod-eluna`), not contained here.
+- **AIO Framework is not server code** — lives in `share-public/AIO_Server/` and is copied into the Eluna `lua_scripts/` directory.

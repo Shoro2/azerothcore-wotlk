@@ -1,26 +1,26 @@
 # Change Log — azerothcore-wotlk (Fork)
 
-> Dieser Repo ist ein **Fork** von `azerothcore/azerothcore-wotlk`. Der Großteil der Commits sind Upstream-Sync-Merges.
-> Hier werden nur **projektspezifische / Custom-Änderungen** notiert (Hooks, DBC-Patches). Standard-Upstream-Fixes lassen sich aus der GitHub-Oberfläche oder via `git log master..HEAD` extrahieren.
+> This repo is a **fork** of `azerothcore/azerothcore-wotlk`. The majority of commits are upstream sync merges.
+> Only **project-specific / custom changes** are noted here (hooks, DBC patches). Standard upstream fixes can be extracted from the GitHub UI or via `git log master..HEAD`.
 
-## Custom-Änderungen (projekt-spezifisch)
+## Custom changes (project-specific)
 
-> Stand: 2026-05-01. Bei jedem neuen Custom-Commit hier eine Zeile ergänzen.
+> As of: 2026-05-01. Add a line here for every new custom commit.
 
-### Hooks für externe Module
+### Hooks for external modules
 
-- 2026-03-22 — feat: Reagent-Hooks für External Storage (in `share-public/claude_log.md` dokumentiert) — `OnPlayerCheckReagent` und `OnPlayerConsumeReagent` PlayerScript-Hooks ergänzt. Aufrufstellen: `Spell::CheckItems()` und `Spell::TakeReagents()`. Genutzt von **mod-endless-storage** (mittlerweile via Lua-Pfad ersetzt — Hooks bleiben aber im Core, falls künftig wieder gebraucht).
-  - betroffene Dateien: `src/server/game/Scripting/ScriptDefines/PlayerScript.{h,cpp}`, `src/server/game/Scripting/ScriptMgr.h`, `src/server/game/Spells/Spell.cpp`
-  - ~45 Zeilen Custom-Code
+- 2026-03-22 — feat: reagent hooks for External Storage (documented in `share-public/claude_log.md`) — added `OnPlayerCheckReagent` and `OnPlayerConsumeReagent` PlayerScript hooks. Call sites: `Spell::CheckItems()` and `Spell::TakeReagents()`. Used by **mod-endless-storage** (now replaced via the Lua path — but hooks remain in the core in case they are needed again in the future).
+  - affected files: `src/server/game/Scripting/ScriptDefines/PlayerScript.{h,cpp}`, `src/server/game/Scripting/ScriptMgr.h`, `src/server/game/Spells/Spell.cpp`
+  - ~45 lines of custom code
 
 ### DBC
 
-- 2026-03-18 — fix: Spell.dbc Korruption behoben + Validierung eingebaut (in `share-public/claude_log.md`) — `share/dbc/Spell.dbc` und `share/copy_spells_dbc.py` mit 6 Schutzmaßnahmen (Größencheck, String-Table, Duplikat-Erkennung, Format-Konsistenz, Source≠Target, Post-Write-Verify).
+- 2026-03-18 — fix: Spell.dbc corruption resolved + validation built in (in `share-public/claude_log.md`) — `share/dbc/Spell.dbc` and `share/copy_spells_dbc.py` with 6 safeguards (size check, string table, duplicate detection, format consistency, source≠target, post-write verify).
 
-## Letzte Upstream-Syncs (zur Orientierung)
+## Latest upstream syncs (for orientation)
 
 - 2026-04-06 — Merge upstream/master ([67375a7](https://github.com/Shoro2/azerothcore-wotlk/commit/67375a7ca6c583f339d7f628c4f1f2ee91b76fbf))
-- Upstream-Highlights aus diesem Merge:
+- Upstream highlights from this merge:
   - fix(Core/Movement): prevent PvP flag and backwards movement on taxi login (#25153)
   - fix(Scripts/Magtheridon): scheduler update before UpdateVictim (#25379)
   - fix(Core/Unit): prevent creature evade when on threat list (#25328)
@@ -28,8 +28,8 @@
   - fix(Core/Groups): pass actual loot count to OnPlayerGroupRollRewardItem (#25312)
   - fix(Core/Loot): restore hide quest starter item conditions (#25355)
 
-## Konvention
+## Convention
 
-Neue Custom-Einträge oben unter "Custom-Änderungen" anhängen. Upstream-Sync-Merges in einem Sammeleintrag pro Sync-Datum, ohne jeden einzelnen Upstream-PR aufzulisten.
+Append new custom entries at the top under "Custom changes". Bundle upstream sync merges into a single entry per sync date, without listing every individual upstream PR.
 
-Detaillierte Beschreibungen Custom-Änderungen gehören parallel in `share-public/claude_log.md`.
+Detailed descriptions of custom changes belong alongside in `share-public/claude_log.md`.

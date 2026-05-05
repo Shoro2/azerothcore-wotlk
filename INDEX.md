@@ -1,31 +1,31 @@
 # INDEX — azerothcore-wotlk (Fork)
 
-Einstiegspunkt für KI-Tools.
+Entry point for AI tools.
 
-## Files in diesem Repo
+## Files in this repo
 
-| Datei | Größe | Zweck |
+| File | Size | Purpose |
 |-------|------:|-------|
-| `INDEX.md` | <1 KB | diese Datei — Navigation |
-| `CLAUDE.md` | ~6 KB | **Was** ist dieser Fork, welche Custom-Erweiterungen, welche IDs/DBC-Patches |
-| `data_structure.md` | ~7 KB | Folder/File-Auflistung des Cores |
-| `functions.md` | ~7 KB | **Wie**: Hooks-Liste, Build, DB-Setup, Custom-Hook-Implementations |
-| `log.md` | ~2 KB | Commit-Log |
-| `todo.md` | ~1 KB | offene Aufgaben (fork-spezifisch) |
+| `INDEX.md` | <1 KB | this file — navigation |
+| `CLAUDE.md` | ~6 KB | **What** this fork is, which custom extensions, which IDs/DBC patches |
+| `data_structure.md` | ~7 KB | Folder/file listing of the core |
+| `functions.md` | ~7 KB | **How**: hooks list, build, DB setup, custom hook implementations |
+| `log.md` | ~2 KB | Commit log |
+| `todo.md` | ~1 KB | open tasks (fork-specific) |
 
 ## Cross-Repo
 
-- Projekt-Übersicht: [`share-public/AI_GUIDE.md`](https://github.com/Shoro2/share-public/blob/main/AI_GUIDE.md)
-- Cross-Repo-Historie: [`share-public/claude_log.md`](https://github.com/Shoro2/share-public/blob/main/claude_log.md)
-- Architektur (deep dive): [`share-public/docs/02-architecture.md`](https://github.com/Shoro2/share-public/blob/main/docs/02-architecture.md)
-- Spell-System: [`share-public/docs/03-spell-system.md`](https://github.com/Shoro2/share-public/blob/main/docs/03-spell-system.md)
-- DB-Tabellen-Referenz: [`share-public/mysqldbextracts/mysql_column_list_all.txt`](https://github.com/Shoro2/share-public/blob/main/mysqldbextracts/mysql_column_list_all.txt)
+- Project overview: [`share-public/AI_GUIDE.md`](https://github.com/Shoro2/share-public/blob/main/AI_GUIDE.md)
+- Cross-repo history: [`share-public/claude_log.md`](https://github.com/Shoro2/share-public/blob/main/claude_log.md)
+- Architecture (deep dive): [`share-public/docs/02-architecture.md`](https://github.com/Shoro2/share-public/blob/main/docs/02-architecture.md)
+- Spell system: [`share-public/docs/03-spell-system.md`](https://github.com/Shoro2/share-public/blob/main/docs/03-spell-system.md)
+- DB tables reference: [`share-public/mysqldbextracts/mysql_column_list_all.txt`](https://github.com/Shoro2/share-public/blob/main/mysqldbextracts/mysql_column_list_all.txt)
 
 ## Quick Facts
 
-- AzerothCore-Fork für **WoW 3.3.5a (WotLK)** — C++17, CMake, MySQL/MariaDB
-- **Custom-Erweiterungen über Upstream hinaus**:
-  - `OnPlayerCheckReagent` / `OnPlayerConsumeReagent` PlayerScript-Hooks (für Crafting-Reagenz-Integration)
-  - Custom Spell.dbc mit Custom-Spells (100xxx, 900xxx)
-- Doku zur Doku: dieses Repo ist die **Tiefenreferenz**; Daily-Use-Guide liegt in `share-public`.
-- **Wichtig für KI**: nicht ungefragt builden, nicht in `data/sql/base/` editieren, kein `--no-verify`.
+- AzerothCore fork for **WoW 3.3.5a (WotLK)** — C++17, CMake, MySQL/MariaDB
+- **Custom extensions beyond upstream**:
+  - `OnPlayerCheckReagent` / `OnPlayerConsumeReagent` PlayerScript hooks (for crafting reagent integration)
+  - Custom Spell.dbc with custom spells (100xxx, 900xxx)
+- Docs about docs: this repo is the **deep reference**; daily-use guide lives in `share-public`.
+- **Important for AI**: do not build unprompted, do not edit in `data/sql/base/`, no `--no-verify`.

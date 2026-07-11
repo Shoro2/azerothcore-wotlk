@@ -1745,7 +1745,7 @@ void ObjectMgr::LoadCreatureModelInfo()
 
         // Checks
 
-        if (!sCreatureDisplayInfoStore.LookupEntry(modelId))
+        if (!creatureDisplay)
             LOG_ERROR("sql.sql", "Table `creature_model_info` has model for not existed display id ({}).", modelId);
 
         if (modelInfo.gender > GENDER_NONE)
@@ -1763,7 +1763,7 @@ void ObjectMgr::LoadCreatureModelInfo()
         if (modelInfo.combat_reach < 0.1f)
             modelInfo.combat_reach = DEFAULT_COMBAT_REACH;
 
-        if (CreatureModelDataEntry const* modelData = sCreatureModelDataStore.LookupEntry(creatureDisplay->ModelId))
+        if (CreatureModelDataEntry const* modelData = creatureDisplay ? sCreatureModelDataStore.LookupEntry(creatureDisplay->ModelId) : nullptr)
         {
             for (uint32 i = 0; i < 14; i++)
             {

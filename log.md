@@ -7,6 +7,11 @@
 
 > As of: 2026-05-01. Add a line here for every new custom commit.
 
+### Core hardening
+
+- 2026-07-11 — fix(Core/Globals): no crash on missing display id (documented in `share-public/claude_log.md`) — `ObjectMgr::LoadCreatureModelInfo` dereferenced a null `CreatureDisplayInfoEntry` when `creature_model_info` references a display id absent from `CreatureDisplayInfo.dbc`, killing the worldserver at startup; now guarded warn-and-continue.
+  - affected files: `src/server/game/Globals/ObjectMgr.cpp`
+
 ### Hooks for external modules
 
 - 2026-03-22 — feat: reagent hooks for External Storage (documented in `share-public/claude_log.md`) — added `OnPlayerCheckReagent` and `OnPlayerConsumeReagent` PlayerScript hooks. Call sites: `Spell::CheckItems()` and `Spell::TakeReagents()`. Used by **mod-endless-storage** (now replaced via the Lua path — but hooks remain in the core in case they are needed again in the future).

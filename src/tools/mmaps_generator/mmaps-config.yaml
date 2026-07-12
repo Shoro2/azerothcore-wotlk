@@ -47,7 +47,7 @@ mmapsConfig:
     #
     # Vanilla WotLK uses 6, which allows creatures to "jump" over fences.
     # Classic WotLK uses 4, which forces creatures to walk around fences.
-    walkableClimb: 6
+    walkableClimb: 4
 
     # Minimum distance (in cell units) around walkable surfaces.
     # Helps prevent NPCs from clipping into walls and narrow gaps.

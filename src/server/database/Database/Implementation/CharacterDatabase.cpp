@@ -646,8 +646,6 @@ void CharacterDatabaseConnection::DoPrepareStatements()
     // mod-forgotten-talents
     PrepareStatement(CHAR_SEL_FORGOTTEN_POWER, "SELECT `total_power`, `selected_loadout`, `revision` FROM `character_forgotten_power` WHERE `guid` = ?", CONNECTION_SYNCH);
     PrepareStatement(CHAR_INS_FORGOTTEN_POWER, "INSERT IGNORE INTO `character_forgotten_power` (`guid`) VALUES (?)", CONNECTION_BOTH);
-    PrepareStatement(CHAR_UPD_FORGOTTEN_POWER_ADD, "UPDATE `character_forgotten_power` SET `total_power` = LEAST(`total_power` + ?, ?), `revision` = `revision` + 1 WHERE `guid` = ?", CONNECTION_ASYNC);
-    PrepareStatement(CHAR_UPD_FORGOTTEN_POWER_SET, "UPDATE `character_forgotten_power` SET `total_power` = ?, `revision` = `revision` + 1 WHERE `guid` = ?", CONNECTION_ASYNC);
     PrepareStatement(CHAR_UPD_FORGOTTEN_REVISION, "UPDATE `character_forgotten_power` SET `revision` = `revision` + 1 WHERE `guid` = ?", CONNECTION_ASYNC);
     PrepareStatement(CHAR_UPD_FORGOTTEN_SELECTED_LOADOUT, "UPDATE `character_forgotten_power` SET `selected_loadout` = ?, `revision` = `revision` + 1 WHERE `guid` = ?", CONNECTION_ASYNC);
     PrepareStatement(CHAR_SEL_FORGOTTEN_LOADOUTS, "SELECT `loadout_id`, `name`, `revision`, `spent_power` FROM `character_forgotten_loadout` WHERE `guid` = ? ORDER BY `loadout_id`", CONNECTION_SYNCH);
@@ -662,10 +660,11 @@ void CharacterDatabaseConnection::DoPrepareStatements()
     PrepareStatement(CHAR_INS_FORGOTTEN_GRANT, "INSERT IGNORE INTO `character_forgotten_grant` (`guid`, `spell_id`) VALUES (?, ?)", CONNECTION_ASYNC);
     PrepareStatement(CHAR_DEL_FORGOTTEN_GRANT, "DELETE FROM `character_forgotten_grant` WHERE `guid` = ? AND `spell_id` = ?", CONNECTION_ASYNC);
     PrepareStatement(CHAR_DEL_FORGOTTEN_GRANTS, "DELETE FROM `character_forgotten_grant` WHERE `guid` = ?", CONNECTION_ASYNC);
-    PrepareStatement(CHAR_INS_FORGOTTEN_LEDGER, "INSERT INTO `character_forgotten_ledger` (`guid`, `delta`, `balance_after`, `source_type`, `source_id`) VALUES (?, ?, ?, ?, ?)", CONNECTION_ASYNC);
     PrepareStatement(CHAR_DEL_FORGOTTEN_POWER, "DELETE FROM `character_forgotten_power` WHERE `guid` = ?", CONNECTION_ASYNC);
     PrepareStatement(CHAR_DEL_FORGOTTEN_LOADOUTS, "DELETE FROM `character_forgotten_loadout` WHERE `guid` = ?", CONNECTION_ASYNC);
-    PrepareStatement(CHAR_DEL_FORGOTTEN_LEDGER, "DELETE FROM `character_forgotten_ledger` WHERE `guid` = ?", CONNECTION_ASYNC);
+    PrepareStatement(CHAR_UPS_FORGOTTEN_NODE, "INSERT INTO `character_forgotten_node` (`guid`, `loadout_id`, `node_id`, `rank`) VALUES (?, 0, ?, ?) ON DUPLICATE KEY UPDATE `rank` = VALUES(`rank`)", CONNECTION_ASYNC);
+    PrepareStatement(CHAR_INS_FORGOTTEN_PURCHASE, "INSERT INTO `character_forgotten_purchase` (`guid`, `node_id`, `rank`, `t1`, `t2`, `t3`, `t4`, `t5`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", CONNECTION_ASYNC);
+    PrepareStatement(CHAR_DEL_FORGOTTEN_PURCHASES, "DELETE FROM `character_forgotten_purchase` WHERE `guid` = ?", CONNECTION_ASYNC);
 
     // mod-paragon-itemgen
     PrepareStatement(CHAR_SEL_PARAGON_ROLE, "SELECT `role`, `mainStat` FROM `character_paragon_role` WHERE `characterID` = ?", CONNECTION_SYNCH);

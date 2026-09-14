@@ -7,6 +7,8 @@
 
 > As of: 2026-05-01. Add a line here for every new custom commit.
 
+- 2026-09-14 — feat(Core): class ids 12-32 foundation, CoA Tier 0 port (spike branch `claude/coa-dummy-class-753fde25`; details in `ForgottenLand2.0/tools/coa-spike/plan/task-3-report.md`) — `MAX_CLASSES` 12→33, the 21 CoA class enum members + `IsAscensionClass()` / `GetLegacyClassForCustomClass()` / `ExpandLegacyClassMask()`, per-class dodge/miss/parry arrays indexed through the legacy class, who-list shift guard; affected files: `SharedDefines.h`, `enuminfo_SharedDefines.cpp`, `Player.cpp`, `StatSystem.cpp`, `MiscHandler.cpp`.
+
 ### Core hardening
 
 - 2026-07-11 — fix(Core/Globals): no crash on missing display id (documented in `share-public/claude_log.md`) — `ObjectMgr::LoadCreatureModelInfo` dereferenced a null `CreatureDisplayInfoEntry` when `creature_model_info` references a display id absent from `CreatureDisplayInfo.dbc`, killing the worldserver at startup; now guarded warn-and-continue.

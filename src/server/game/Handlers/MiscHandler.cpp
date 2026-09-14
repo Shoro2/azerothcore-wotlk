@@ -315,8 +315,9 @@ void WorldSession::HandleWhoOpcode(WorldPacket& recvData)
         }
 
         // check if class matches classmask
+        // the client mask has 32 bits: class ids >= 32 cannot be filtered and are never excluded
         uint8 class_ = target.GetClass();
-        if (!(classmask & (1 << class_)))
+        if (class_ < 32 && !(classmask & (uint32(1) << class_)))
         {
             continue;
         }

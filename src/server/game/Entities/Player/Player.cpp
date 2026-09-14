@@ -5148,6 +5148,7 @@ void Player::GetDodgeFromAgility(float& diminishing, float& nondiminishing)
 
     uint8 level = GetLevel();
     uint32 pclass = getClass();
+    uint32 fallbackClassIndex = GetLegacyClassForCustomClass(Classes(getClass())) - 1;
 
     if (level > GT_MAX_LEVEL)
         level = GT_MAX_LEVEL;
@@ -5162,8 +5163,8 @@ void Player::GetDodgeFromAgility(float& diminishing, float& nondiminishing)
     float bonus_agility = GetStat(STAT_AGILITY) - base_agility;
 
     // calculate diminishing (green in char screen) and non-diminishing (white) contribution
-    diminishing = 100.0f * bonus_agility * dodgeRatio->ratio * crit_to_dodge[pclass - 1];
-    nondiminishing = 100.0f * (dodge_base[pclass - 1] + base_agility * dodgeRatio->ratio * crit_to_dodge[pclass - 1]);
+    diminishing = 100.0f * bonus_agility * dodgeRatio->ratio * crit_to_dodge[fallbackClassIndex];
+    nondiminishing = 100.0f * (dodge_base[fallbackClassIndex] + base_agility * dodgeRatio->ratio * crit_to_dodge[fallbackClassIndex]);
 }
 
 float Player::GetSpellCritFromIntellect()

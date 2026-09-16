@@ -18,6 +18,7 @@
 #include "DBCDatabaseLoader.h"
 #include "DatabaseEnv.h"
 #include "Errors.h"
+#include "Log.h"
 #include "QueryResult.h"
 #include "StringFormat.h"
 
@@ -53,32 +54,22 @@ char* DBCDatabaseLoader::Load(uint32& records, char**& indexTable)
         return nullptr;
     }
 
-    // Resize index table
-    // database query *MUST* contain ORDER BY `index_field` DESC clause
-    uint32 indexTableSize = std::max(records, (*result)[_sqlIndexPos].Get<uint32>() + 1);
-    if (indexTableSize > records)
-    {
-        char** tmpIdxTable = new char* [indexTableSize];
-        memset(tmpIdxTable, 0, indexTableSize * sizeof(char*));
-        memcpy(tmpIdxTable, indexTable, records * sizeof(char*));
-        delete[] indexTable;
-        indexTable = tmpIdxTable;
-    }
-
     std::unique_ptr<char[]> dataTable = std::make_unique<char[]>(result->GetRowCount() * _recordSize);
     std::unique_ptr<uint32[]> newIndexes = std::make_unique<uint32[]>(result->GetRowCount());
     uint32 newRecords = 0;
+    uint32 maxIndexValue = 0;
 
     // Insert sql data into the data array
+    // the index table is resized only after all rows are read, do not access it in this loop
     do
     {
         Field* fields = result->Fetch();
         uint32 indexValue = fields[_sqlIndexPos].Get<uint32>();
-        char* dataValue = indexTable[indexValue];
+        maxIndexValue = std::max(maxIndexValue, indexValue);
 
         // If exist in DBC file override from DB
         newIndexes[newRecords] = indexValue;
-        dataValue = &dataTable[newRecords++ * _recordSize];
+        char* dataValue = &dataTable[newRecords++ * _recordSize];
 
         uint32 dataOffset = 0;
         uint32 sqlColumnNumber = 0;
@@ -123,9 +114,29 @@ char* DBCDatabaseLoader::Load(uint32& records, char**& indexTable)
 
     ASSERT(newRecords == result->GetRowCount());
 
+    // Resize index table
+    // rows are ordered by `ID`, which is not the index field of every format (e.g. CurrencyTypes),
+    // so the size comes from the highest index value of all rows, not from the first row
+    uint32 indexTableSize = std::max(records, maxIndexValue + 1);
+    if (indexTableSize > records)
+    {
+        char** tmpIdxTable = new char* [indexTableSize];
+        memset(tmpIdxTable, 0, indexTableSize * sizeof(char*));
+        memcpy(tmpIdxTable, indexTable, records * sizeof(char*));
+        delete[] indexTable;
+        indexTable = tmpIdxTable;
+    }
+
     // insert new records to index table
     for (uint32 i = 0; i < newRecords; ++i)
     {
+        // only reachable if the highest index value is the uint32 maximum (size overflow)
+        if (newIndexes[i] >= indexTableSize)
+        {
+            LOG_ERROR("sql.sql", "Table `{}` has a row with index value {} outside of the index table (size {}), skipped.", _sqlTableName, newIndexes[i], indexTableSize);
+            continue;
+        }
+
         // cppcheck-suppress autoVariables
         indexTable[newIndexes[i]] = &dataTable[i * _recordSize];
     }

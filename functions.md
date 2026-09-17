@@ -17,7 +17,17 @@ if (itemcount > 0)
 
 ## Custom Spell.dbc
 
-The server loads a custom variant of `Spell.dbc` from `share/dbc/` that adds custom spell IDs:
+The server loads a custom variant of `Spell.dbc` that adds custom spell IDs. **This repo tracks no DBC file** (there is no `share/` directory); the copies live outside it, documented in share-public:
+
+| Copy | Location | Reference |
+|------|----------|-----------|
+| Server | `Data/dbc/Spell.dbc` of the installed server: workbench `C:\wowstuff\dcore\Data\dbc\Spell.dbc`, mirrored to the host `/wowserver/acore-server/data/dbc/` through the migration ledger; record-level patches by the Forgotten Land workspace scripts 35, 36, 39, 40 (`C:\wowstuff\ForgottenLand2.0\scripts\`) | [FL/15 MIG-002](https://github.com/Shoro2/share-public/blob/main/docs/World%20of%20Warcraft/forgotten-land/15-host-migration-log.md) |
+| Client | `DBFilesClient\Spell.dbc` in `patch-9.MPQ`, built from the hot-DBC staging (patched by scripts 33, 35, 36, 40) | [FL/07](https://github.com/Shoro2/share-public/blob/main/docs/World%20of%20Warcraft/forgotten-land/07-client-packaging-and-rendering.md) |
+| DB override | `acore_world.spell_dbc` rows, loaded over the file at server start | [03-spell-system](https://github.com/Shoro2/share-public/blob/main/docs/World%20of%20Warcraft/03-spell-system.md) |
+
+share-public `dbc/Spell.dbc` is a non-stock reference extract that differs from the deployed server copy — never deploy it. If the server copy looks corrupt, restore it from the nightly host backup (`data/dbc/`, share-public [Production-Host/04](https://github.com/Shoro2/share-public/blob/main/docs/General/Production-Host/04-backup-and-restore.md)).
+
+Custom spell ID ranges:
 
 | ID range | Use |
 |----------|-----------|

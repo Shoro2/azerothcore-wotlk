@@ -97,14 +97,14 @@ Most important directories for custom module work:
 Beyond the regular upstream codebase, this fork has:
 
 - **No additional PlayerScript hooks** — `OnPlayerCheckReagent` / `OnPlayerConsumeReagent` were reverted in `0cb0773a7`; only the `Spell::TakeReagents()` `itemcount > 0` guard remains. See `functions.md`.
-- **Custom Spell.dbc** at `share/dbc/Spell.dbc` with custom spell IDs (100xxx auras, 900xxx custom effects, 950xxx passives).
+- **Custom Spell.dbc** with custom spell IDs (100xxx auras, 900xxx custom effects, 950xxx passives) — **not tracked in this repo**; server copy, client copy and patch scripts: [`functions.md`](./functions.md#custom-spelldbc).
 - **Custom modules** in `modules/` (mod-paragon, mod-paragon-itemgen, mod-loot-filter, mod-auto-loot, mod-endless-storage; possibly more like mod-custom-spells, mod-dungeon-challenge).
 
 ## Size notes
 
 - **Huge tree** — never list the full `src/` tree or read it as a whole. Grep specifically or read by path.
 - Individual source files may be >50 KB (`Player.cpp`, `Spell.cpp`, `Unit.cpp`). Chunk with `Read offset/limit`.
-- DBC files in `share/dbc/` are **binary** — never read directly.
+- DBC files are **binary** — never read directly (none are tracked here; locations in [`functions.md`](./functions.md#custom-spelldbc)).
 
 ## CI workflows (in `.github/workflows/`)
 

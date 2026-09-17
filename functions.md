@@ -2,43 +2,18 @@
 
 > Detailed function and mechanics reference for **custom extensions beyond upstream AzerothCore**. For pure content docs see `CLAUDE.md`. Standard AC concepts (SpellScript lifecycle, proc system, DBC) are documented centrally in `share-public/docs/03-spell-system.md`.
 
-## Custom hooks compared to upstream
+## Reagent guard (hooks reverted)
 
-This fork extends `PlayerScript` with two hooks for external storage solutions.
+The fork has **no custom reagent hooks**. `OnPlayerCheckReagent` / `OnPlayerConsumeReagent` were added in `e99877bce` for mod-endless-storage and reverted the same day in `0cb0773a7` (2026-03-22), after the module moved to its Lua path. The revert removed them from `PlayerScript.h/.cpp`, `ScriptMgr.h` and both call sites in `Spell.cpp`.
 
-### `OnPlayerCheckReagent`
-
-```cpp
-// src/server/game/Scripting/ScriptDefines/PlayerScript.h
-virtual bool OnPlayerCheckReagent(Player* player, Spell* spell,
-                                   uint32 itemId, uint32 itemCount, uint32& foundCount);
-```
-
-- **Call site**: `Spell::CheckItems()` — when the inventory does not have enough reagents for a cast.
-- **Contract**: hook implementer can increase `foundCount` (additively from an external source) to indicate reagents available there. Returns `true` if the cast may now proceed.
-- **Used by**: originally mod-endless-storage (now replaced via the Lua path; the hook remains available in the core).
-
-### `OnPlayerConsumeReagent`
+What remains is one guard in `Spell::TakeReagents()` (`src/server/game/Spells/Spell.cpp:5587`):
 
 ```cpp
-virtual bool OnPlayerConsumeReagent(Player* player, Spell* spell,
-                                     uint32 itemId, uint32& itemCount);
+if (itemcount > 0)
+    p_caster->DestroyItemCount(itemid, itemcount, true);
 ```
 
-- **Call site**: `Spell::TakeReagents()` — before `DestroyItemCount`. Called for every reagent.
-- **Contract**: hook implementer can reduce `itemCount` (the amount still to be consumed from the inventory) after a portion was deducted from an external source. Returns `true` if consumed externally.
-- **Default behavior** (not implemented): no external consumption, everything from the inventory.
-
-### Implementation details
-
-| File | Change |
-|-------|----------|
-| `src/server/game/Scripting/ScriptDefines/PlayerScript.h` | Enum extension (`PLAYERHOOK_ON_CHECK_REAGENT`, `..._CONSUME_REAGENT`), virtual methods |
-| `src/server/game/Scripting/ScriptDefines/PlayerScript.cpp` | `ScriptMgr::OnPlayerCheckReagent` / `..._ConsumeReagent` dispatcher |
-| `src/server/game/Scripting/ScriptMgr.h` | Method declarations |
-| `src/server/game/Spells/Spell.cpp` | Call sites in `CheckItems()` and `TakeReagents()` |
-
-Total scope: ~45 lines of custom code.
+`DestroyItemCount` is skipped when a reagent slot's count is 0. The guard was added with the consume hook, which could lower the count to 0; without the hook it is harmless. Total scope: 2 lines.
 
 ## Custom Spell.dbc
 
@@ -103,7 +78,7 @@ Loader naming convention: `<module-name>` with `-` replaced by `_`. Special case
 | Class | Important hooks for custom modules |
 |--------|----------------------------------|
 | `WorldScript` | `OnAfterConfigLoad`, `OnStartup`, `OnUpdate`, `OnShutdown` |
-| `PlayerScript` | `OnPlayerLogin`, `OnPlayerLogout`, `OnPlayerLootItem`, `OnPlayerLevelChanged`, `OnPlayerMapChanged`, `OnCreatureKill`, `OnPlayerCheckReagent` (custom), `OnPlayerConsumeReagent` (custom), `OnPlayerCanSetTradeItem`, `OnPlayerCanSendMail`, `OnPlayerCanSendErrorAlreadyLooted`, `OnPlayerUpdate`, `OnPlayerCreateItem`, `OnPlayerQuestRewardItem`, `OnPlayerAfterStoreOrEquipNewItem` |
+| `PlayerScript` | `OnPlayerLogin`, `OnPlayerLogout`, `OnPlayerLootItem`, `OnPlayerLevelChanged`, `OnPlayerMapChanged`, `OnCreatureKill`, `OnPlayerCanSetTradeItem`, `OnPlayerCanSendMail`, `OnPlayerCanSendErrorAlreadyLooted`, `OnPlayerUpdate`, `OnPlayerCreateItem`, `OnPlayerQuestRewardItem`, `OnPlayerAfterStoreOrEquipNewItem` |
 | `UnitScript` | `OnDamage`, `OnHeal`, `OnAuraApply`, `OnAuraRemove` |
 | `CreatureScript` | `OnGossipHello`, `OnGossipSelect`, AI factory |
 | `SpellScript`/`AuraScript` | Cast/Hit/Effect/Proc hooks |

@@ -25,7 +25,7 @@ Entry point for AI tools.
 
 - AzerothCore fork for **WoW 3.3.5a (WotLK)** — C++17, CMake, MySQL/MariaDB
 - **Custom extensions beyond upstream**:
-  - `OnPlayerCheckReagent` / `OnPlayerConsumeReagent` PlayerScript hooks (for crafting reagent integration)
+  - `Spell::TakeReagents()` `itemcount > 0` guard (the `OnPlayerCheckReagent` / `OnPlayerConsumeReagent` hooks were reverted in `0cb0773a7`)
   - Custom Spell.dbc with custom spells (100xxx, 900xxx)
 - Docs about docs: this repo is the **deep reference**; daily-use guide lives in `share-public`.
 - **Important for AI**: do not build unprompted, do not edit in `data/sql/base/`, no `--no-verify`.

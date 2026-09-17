@@ -33,12 +33,11 @@ All custom modules attach to hooks provided by `ScriptMgr`. The actual module lo
 
 | Area | Extension | Consumer |
 |---------|-------------|-----------|
-| **Hook** | `OnPlayerCheckReagent(Player*, uint32 itemId, uint32 count, bool& consumed)` | `mod-endless-storage` (historical; currently unused) |
-| **Hook** | `OnPlayerConsumeReagent(Player*, uint32 itemId, uint32 count)` | `mod-endless-storage` (historical; currently unused) |
+| **Guard** | `Spell::TakeReagents()` calls `DestroyItemCount` only when `itemcount > 0` (`src/server/game/Spells/Spell.cpp:5587`). The `OnPlayerCheckReagent` / `OnPlayerConsumeReagent` hooks were reverted in `0cb0773a7` and do not exist | every reagent cast |
 | **DBC** | `share/dbc/Spell.dbc` with custom spell entries 100000-100027, 100201-100227, 900100-900116, 920920, … | `mod-paragon`, `mod-paragon-itemgen`, `mod-custom-spells` |
 | **Tools** | `share/copy_spells_dbc.py` (with 6 safeguards against DBC corruption) | DBC maintenance |
 
-Implementation details of the hooks: [`functions.md`](./functions.md#custom-hooks).
+Details of the guard and the reverted hooks: [`functions.md`](./functions.md#reagent-guard-hooks-reverted).
 
 ## Custom data
 

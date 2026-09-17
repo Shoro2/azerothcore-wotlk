@@ -96,7 +96,7 @@ Most important directories for custom module work:
 
 Beyond the regular upstream codebase, this fork has:
 
-- **2 additional PlayerScript hooks** — `OnPlayerCheckReagent` / `OnPlayerConsumeReagent` (for crafting reagent routing). See `functions.md`.
+- **No additional PlayerScript hooks** — `OnPlayerCheckReagent` / `OnPlayerConsumeReagent` were reverted in `0cb0773a7`; only the `Spell::TakeReagents()` `itemcount > 0` guard remains. See `functions.md`.
 - **Custom Spell.dbc** at `share/dbc/Spell.dbc` with custom spell IDs (100xxx auras, 900xxx custom effects, 950xxx passives).
 - **Custom modules** in `modules/` (mod-paragon, mod-paragon-itemgen, mod-loot-filter, mod-auto-loot, mod-endless-storage; possibly more like mod-custom-spells, mod-dungeon-challenge).
 

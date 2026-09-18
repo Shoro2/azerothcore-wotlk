@@ -9,6 +9,8 @@
 
 ### Custom classes (CoA port)
 
+- 2026-09-19 — feat(Core/Spells): spell effect and aura enums widened for the CoA spell package, Phase 3 "must widen to load" (spike branch `claude/coa-spell-enums-753fde25`; spec: `share-public` `docs/World of Warcraft/coa-classes/evidence/spell-package-spec.md` §2) — `TOTAL_SPELL_EFFECTS` 165→199 and `TOTAL_AURAS` 317→367 with CoA's names plus `SPELL_EFFECT_ASCENSION_<id>` / `SPELL_AURA_ASCENSION_<id>` placeholder names; every new effect is `EffectNULL`, every new aura `HandleNULL`, every new `SpellEffectInfo::_data` row a no-implicit-target placeholder, so such spells load and do nothing on those effects until the handlers are ported. Both handler tables and `_data` are length-checked at compile time (a short list no longer leaves a nullptr tail); the aura dispatch falls back to `HandleNoImmediateEffect` on a nullptr slot.
+  - affected files: `SharedDefines.h`, `SpellAuraDefines.h`, `SpellEffects.cpp`, `SpellInfo.cpp`, `SpellAuraEffects.cpp`, `Spell.cpp`
 - 2026-09-14 — feat(Core): class ids 12-32 foundation, CoA Tier 0 port (spike branch `claude/coa-dummy-class-753fde25`; documented in `share-public` PR #65, `docs/World of Warcraft/coa-classes/04-dummy-class-spike.md`) — `MAX_CLASSES` 12→33, the 21 CoA class enum members + `IsAscensionClass()` / `GetLegacyClassForCustomClass()` / `ExpandLegacyClassMask()`, per-class dodge/miss/parry arrays indexed through the legacy class, who-list shift guard.
   - affected files: `SharedDefines.h`, `enuminfo_SharedDefines.cpp`, `Player.cpp`, `StatSystem.cpp`, `MiscHandler.cpp`
 

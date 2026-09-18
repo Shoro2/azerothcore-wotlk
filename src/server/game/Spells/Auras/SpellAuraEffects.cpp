@@ -384,6 +384,60 @@ pAuraEffectHandler AuraEffectHandler[] =
     &AuraEffect::HandlePreventResurrection,                       //314 SPELL_AURA_PREVENT_RESURRECTION todo
     &AuraEffect::HandleNoImmediateEffect,                         //315 SPELL_AURA_UNDERWATER_WALKING todo
     &AuraEffect::HandleNoImmediateEffect,                         //316 SPELL_AURA_PERIODIC_HASTE implemented in AuraEffect::CalculatePeriodic
+    // 317-366: Project Ascension (CoA) auras. All HandleNULL until their
+    // mechanics are ported; "CoA:" names the handler CoA itself uses, where the
+    // spell-package spec (share-public coa-classes, spell-package-spec.md 2.3)
+    // records it (nullptr = CoA has no handler either).
+    &AuraEffect::HandleNULL,                                      //317 SPELL_AURA_ASCENSION_MOD_ABSORB_AMOUNT_PCT              CoA: HandleNoImmediateEffect
+    &AuraEffect::HandleNULL,                                      //318 SPELL_AURA_ASCENSION_318                                placeholder name
+    &AuraEffect::HandleNULL,                                      //319 SPELL_AURA_ASCENSION_MOD_HEALING_RECEIVED_PCT           CoA: HandleNoImmediateEffect
+    &AuraEffect::HandleNULL,                                      //320 SPELL_AURA_ASCENSION_320                                placeholder name
+    &AuraEffect::HandleNULL,                                      //321 SPELL_AURA_ASCENSION_321                                placeholder name
+    &AuraEffect::HandleNULL,                                      //322 SPELL_AURA_ASCENSION_322                                placeholder name
+    &AuraEffect::HandleNULL,                                      //323 SPELL_AURA_ASCENSION_323                                placeholder name
+    &AuraEffect::HandleNULL,                                      //324 SPELL_AURA_ASCENSION_324                                placeholder name
+    &AuraEffect::HandleNULL,                                      //325 SPELL_AURA_ASCENSION_325                                placeholder name
+    &AuraEffect::HandleNULL,                                      //326 SPELL_AURA_ASCENSION_326                                placeholder name
+    &AuraEffect::HandleNULL,                                      //327 SPELL_AURA_ASCENSION_MOD_STAT_FROM_STAT                 CoA: HandleAscensionModStatFromStat
+    &AuraEffect::HandleNULL,                                      //328 SPELL_AURA_ASCENSION_MOD_MAX_MANA_FROM_STAT             CoA: HandleAscensionModMaxManaFromStat
+    &AuraEffect::HandleNULL,                                      //329 SPELL_AURA_ASCENSION_329                                placeholder name
+    &AuraEffect::HandleNULL,                                      //330 SPELL_AURA_ASCENSION_MOD_CRIT_CHANCE_AGAINST_TARGET     CoA: HandleNoImmediateEffect
+    &AuraEffect::HandleNULL,                                      //331 SPELL_AURA_ASCENSION_331                                placeholder name
+    &AuraEffect::HandleNULL,                                      //332 SPELL_AURA_ASCENSION_332                                placeholder name
+    &AuraEffect::HandleNULL,                                      //333 SPELL_AURA_ASCENSION_MOD_HIT_CHANCE_ALL_PCT             CoA: HandleAscensionModHitChanceAll
+    &AuraEffect::HandleNULL,                                      //334 SPELL_AURA_ASCENSION_334                                placeholder name
+    &AuraEffect::HandleNULL,                                      //335 SPELL_AURA_ASCENSION_335                                placeholder name
+    &AuraEffect::HandleNULL,                                      //336 SPELL_AURA_ASCENSION_336                                placeholder name, CoA: nullptr
+    &AuraEffect::HandleNULL,                                      //337 SPELL_AURA_ASCENSION_337                                placeholder name
+    &AuraEffect::HandleNULL,                                      //338 SPELL_AURA_ASCENSION_MOD_IGNORE_ARMOR_PCT               CoA: HandleNoImmediateEffect
+    &AuraEffect::HandleNULL,                                      //339 SPELL_AURA_ASCENSION_339                                placeholder name
+    &AuraEffect::HandleNULL,                                      //340 SPELL_AURA_ASCENSION_340                                placeholder name, CoA: nullptr
+    &AuraEffect::HandleNULL,                                      //341 SPELL_AURA_ASCENSION_341                                placeholder name, CoA: nullptr
+    &AuraEffect::HandleNULL,                                      //342 SPELL_AURA_ASCENSION_342                                placeholder name
+    &AuraEffect::HandleNULL,                                      //343 SPELL_AURA_ASCENSION_343                                placeholder name
+    &AuraEffect::HandleNULL,                                      //344 SPELL_AURA_ASCENSION_MOD_ATTACK_POWER_FLAT              CoA: HandleAscensionModAttackPowerFlat
+    &AuraEffect::HandleNULL,                                      //345 SPELL_AURA_ASCENSION_MOD_SPELL_POWER_FLAT               CoA: HandleModHealingDone
+    &AuraEffect::HandleNULL,                                      //346 SPELL_AURA_ASCENSION_346                                placeholder name
+    &AuraEffect::HandleNULL,                                      //347 SPELL_AURA_ASCENSION_347                                placeholder name, CoA: nullptr
+    &AuraEffect::HandleNULL,                                      //348 SPELL_AURA_ASCENSION_348                                placeholder name, CoA: nullptr
+    &AuraEffect::HandleNULL,                                      //349 SPELL_AURA_ASCENSION_349                                placeholder name
+    &AuraEffect::HandleNULL,                                      //350 SPELL_AURA_ASCENSION_MOD_CRIT_CHANCE                    CoA: HandleNoImmediateEffect
+    &AuraEffect::HandleNULL,                                      //351 SPELL_AURA_ASCENSION_351                                placeholder name, CoA: nullptr
+    &AuraEffect::HandleNULL,                                      //352 SPELL_AURA_ASCENSION_352                                placeholder name
+    &AuraEffect::HandleNULL,                                      //353 SPELL_AURA_ASCENSION_353                                placeholder name, CoA: nullptr
+    &AuraEffect::HandleNULL,                                      //354 SPELL_AURA_ASCENSION_354                                placeholder name, CoA: nullptr
+    &AuraEffect::HandleNULL,                                      //355 SPELL_AURA_ASCENSION_355                                placeholder name
+    &AuraEffect::HandleNULL,                                      //356 SPELL_AURA_ASCENSION_356                                placeholder name
+    &AuraEffect::HandleNULL,                                      //357 SPELL_AURA_ASCENSION_MOD_INSTANT_MANA_COST_PCT          CoA: HandleNoImmediateEffect
+    &AuraEffect::HandleNULL,                                      //358 SPELL_AURA_ASCENSION_358                                placeholder name
+    &AuraEffect::HandleNULL,                                      //359 SPELL_AURA_ASCENSION_359                                placeholder name
+    &AuraEffect::HandleNULL,                                      //360 SPELL_AURA_ASCENSION_MOD_HEALING_DONE_VERSUS_AURASTATE  CoA: HandleNoImmediateEffect
+    &AuraEffect::HandleNULL,                                      //361 SPELL_AURA_ASCENSION_361                                placeholder name
+    &AuraEffect::HandleNULL,                                      //362 SPELL_AURA_ASCENSION_362                                placeholder name
+    &AuraEffect::HandleNULL,                                      //363 SPELL_AURA_ASCENSION_363                                placeholder name
+    &AuraEffect::HandleNULL,                                      //364 SPELL_AURA_ASCENSION_364                                placeholder name
+    &AuraEffect::HandleNULL,                                      //365 SPELL_AURA_ASCENSION_365                                placeholder name
+    &AuraEffect::HandleNULL,                                      //366 SPELL_AURA_ASCENSION_366                                placeholder name
 };
 
 static_assert(std::size(AuraEffectHandler) == std::size_t(TOTAL_AURAS),
@@ -798,7 +852,13 @@ void AuraEffect::HandleEffect(AuraApplication* aurApp, uint8 mode, bool apply)
     if ((apply && aurApp->GetRemoveMode()) || prevented)
         return;
 
-    (*this.*AuraEffectHandler [GetAuraType()])(aurApp, mode, apply);
+    // Never call a nullptr slot (CoA's guard). The static_assert keeps the table
+    // full length, but an explicit nullptr entry would still compile.
+    pAuraEffectHandler handler = AuraEffectHandler[GetAuraType()];
+    if (!handler)
+        handler = &AuraEffect::HandleNoImmediateEffect;
+
+    (this->*handler)(aurApp, mode, apply);
 
     // check if script events have removed the aura or if default effect prevention was requested
     if (apply && aurApp->GetRemoveMode())

@@ -996,7 +996,48 @@ enum SpellEffects
     SPELL_EFFECT_TALENT_SPEC_SELECT                 = 162,
     SPELL_EFFECT_163                                = 163,
     SPELL_EFFECT_REMOVE_AURA                        = 164,
-    TOTAL_SPELL_EFFECTS                             = 165
+    // Project Ascension (CoA) extends the 3.3.5 spell-effect range through 198.
+    // Named members use CoA's names (its SharedDefines.h). Members named
+    // SPELL_EFFECT_ASCENSION_<id> are PLACEHOLDERS: CoA gives those ids no name.
+    // Every id loads, but all of them are handled by Spell::EffectNULL until
+    // their mechanics are ported.
+    SPELL_EFFECT_ASCENSION_FIRST                    = 165,
+    SPELL_EFFECT_ASCENSION_MODIFY_COOLDOWN          = 165,
+    SPELL_EFFECT_ASCENSION_RESTORE_BASE_MANA_PCT    = 166,
+    SPELL_EFFECT_ASCENSION_167                      = 167, // placeholder name
+    SPELL_EFFECT_ASCENSION_168                      = 168, // placeholder name
+    SPELL_EFFECT_ASCENSION_SPREAD_AURA              = 169,
+    SPELL_EFFECT_ASCENSION_SPREAD_AURA_2            = 170,
+    SPELL_EFFECT_ASCENSION_171                      = 171, // placeholder name
+    SPELL_EFFECT_ASCENSION_172                      = 172, // placeholder name
+    SPELL_EFFECT_ASCENSION_REFRESH_AURA             = 173,
+    SPELL_EFFECT_ASCENSION_174                      = 174, // placeholder name
+    SPELL_EFFECT_ASCENSION_MODIFY_AURA_STACKS       = 175,
+    SPELL_EFFECT_ASCENSION_MODIFY_AURA_STACKS_2     = 176,
+    SPELL_EFFECT_ASCENSION_MODIFY_AURA_DURATION     = 177,
+    SPELL_EFFECT_ASCENSION_178                      = 178, // placeholder name
+    SPELL_EFFECT_ASCENSION_179                      = 179, // placeholder name
+    SPELL_EFFECT_ASCENSION_180                      = 180, // placeholder name
+    SPELL_EFFECT_ASCENSION_RESTORE_BASE_HEALTH_PCT  = 181,
+    SPELL_EFFECT_ASCENSION_182                      = 182, // placeholder name
+    SPELL_EFFECT_ASCENSION_TRIGGER_SPELL_DELAYED    = 183,
+    SPELL_EFFECT_ASCENSION_TRIGGER_RANDOM_SPELL     = 184,
+    SPELL_EFFECT_ASCENSION_185                      = 185, // placeholder name
+    SPELL_EFFECT_ASCENSION_186                      = 186, // placeholder name
+    SPELL_EFFECT_ASCENSION_RESTORE_SPELL_CHARGES    = 187,
+    SPELL_EFFECT_ASCENSION_188                      = 188, // placeholder name
+    SPELL_EFFECT_ASCENSION_189                      = 189, // placeholder name
+    SPELL_EFFECT_ASCENSION_APPLY_AURA_TO_SUMMONS    = 190,
+    SPELL_EFFECT_ASCENSION_191                      = 191, // placeholder name
+    SPELL_EFFECT_ASCENSION_192                      = 192, // placeholder name
+    SPELL_EFFECT_ASCENSION_193                      = 193, // placeholder name
+    SPELL_EFFECT_ASCENSION_194                      = 194, // placeholder name
+    SPELL_EFFECT_ASCENSION_RESET_COOLDOWN           = 195,
+    SPELL_EFFECT_ASCENSION_196                      = 196, // placeholder name
+    SPELL_EFFECT_ASCENSION_197                      = 197, // placeholder name
+    SPELL_EFFECT_ASCENSION_198                      = 198, // placeholder name
+    SPELL_EFFECT_ASCENSION_LAST                     = 198,
+    TOTAL_SPELL_EFFECTS                             = 199
 };
 
 // EnumUtils: DESCRIBE THIS

@@ -240,6 +240,44 @@ pEffect SpellEffects[] =
     &Spell::EffectActivateSpec,                             //162 SPELL_EFFECT_TALENT_SPEC_SELECT       activate primary/secondary spec
     &Spell::EffectNULL,                                     //163 unused
     &Spell::EffectRemoveAura,                               //164 SPELL_EFFECT_REMOVE_AURA
+    // 165-198: Project Ascension (CoA) effects. All EffectNULL until their
+    // mechanics are ported; "CoA:" names the handler CoA itself uses, where the
+    // spell-package spec (share-public coa-classes, spell-package-spec.md 2.2)
+    // records it.
+    &Spell::EffectNULL,                                     //165 SPELL_EFFECT_ASCENSION_MODIFY_COOLDOWN          CoA: EffectAscensionModifyCooldown
+    &Spell::EffectNULL,                                     //166 SPELL_EFFECT_ASCENSION_RESTORE_BASE_MANA_PCT    CoA: own handler
+    &Spell::EffectNULL,                                     //167 SPELL_EFFECT_ASCENSION_167                      placeholder name
+    &Spell::EffectNULL,                                     //168 SPELL_EFFECT_ASCENSION_168                      placeholder name, CoA: EffectNULL
+    &Spell::EffectNULL,                                     //169 SPELL_EFFECT_ASCENSION_SPREAD_AURA              CoA: EffectNULL
+    &Spell::EffectNULL,                                     //170 SPELL_EFFECT_ASCENSION_SPREAD_AURA_2
+    &Spell::EffectNULL,                                     //171 SPELL_EFFECT_ASCENSION_171                      placeholder name, CoA: EffectNULL
+    &Spell::EffectNULL,                                     //172 SPELL_EFFECT_ASCENSION_172                      placeholder name
+    &Spell::EffectNULL,                                     //173 SPELL_EFFECT_ASCENSION_REFRESH_AURA             CoA: EffectAscensionRefreshAura
+    &Spell::EffectNULL,                                     //174 SPELL_EFFECT_ASCENSION_174                      placeholder name, CoA: EffectNULL
+    &Spell::EffectNULL,                                     //175 SPELL_EFFECT_ASCENSION_MODIFY_AURA_STACKS       CoA: EffectAscensionModifyAuraStacks
+    &Spell::EffectNULL,                                     //176 SPELL_EFFECT_ASCENSION_MODIFY_AURA_STACKS_2     CoA: EffectAscensionModifyAuraStacksBySpell
+    &Spell::EffectNULL,                                     //177 SPELL_EFFECT_ASCENSION_MODIFY_AURA_DURATION     CoA: EffectAscensionModifyAuraDuration
+    &Spell::EffectNULL,                                     //178 SPELL_EFFECT_ASCENSION_178                      placeholder name, CoA: EffectNULL
+    &Spell::EffectNULL,                                     //179 SPELL_EFFECT_ASCENSION_179                      placeholder name
+    &Spell::EffectNULL,                                     //180 SPELL_EFFECT_ASCENSION_180                      placeholder name
+    &Spell::EffectNULL,                                     //181 SPELL_EFFECT_ASCENSION_RESTORE_BASE_HEALTH_PCT  CoA: own handler
+    &Spell::EffectNULL,                                     //182 SPELL_EFFECT_ASCENSION_182                      placeholder name
+    &Spell::EffectNULL,                                     //183 SPELL_EFFECT_ASCENSION_TRIGGER_SPELL_DELAYED    CoA: EffectAscensionTriggerSpellDelayed
+    &Spell::EffectNULL,                                     //184 SPELL_EFFECT_ASCENSION_TRIGGER_RANDOM_SPELL     CoA: EffectNULL
+    &Spell::EffectNULL,                                     //185 SPELL_EFFECT_ASCENSION_185                      placeholder name
+    &Spell::EffectNULL,                                     //186 SPELL_EFFECT_ASCENSION_186                      placeholder name
+    &Spell::EffectNULL,                                     //187 SPELL_EFFECT_ASCENSION_RESTORE_SPELL_CHARGES    CoA: EffectAscensionRestoreSpellCharges
+    &Spell::EffectNULL,                                     //188 SPELL_EFFECT_ASCENSION_188                      placeholder name
+    &Spell::EffectNULL,                                     //189 SPELL_EFFECT_ASCENSION_189                      placeholder name
+    &Spell::EffectNULL,                                     //190 SPELL_EFFECT_ASCENSION_APPLY_AURA_TO_SUMMONS    CoA: EffectApplyAreaAura
+    &Spell::EffectNULL,                                     //191 SPELL_EFFECT_ASCENSION_191                      placeholder name
+    &Spell::EffectNULL,                                     //192 SPELL_EFFECT_ASCENSION_192                      placeholder name, CoA: EffectNULL
+    &Spell::EffectNULL,                                     //193 SPELL_EFFECT_ASCENSION_193                      placeholder name, CoA: EffectNULL
+    &Spell::EffectNULL,                                     //194 SPELL_EFFECT_ASCENSION_194                      placeholder name
+    &Spell::EffectNULL,                                     //195 SPELL_EFFECT_ASCENSION_RESET_COOLDOWN           CoA: EffectAscensionResetCooldown
+    &Spell::EffectNULL,                                     //196 SPELL_EFFECT_ASCENSION_196                      placeholder name
+    &Spell::EffectNULL,                                     //197 SPELL_EFFECT_ASCENSION_197                      placeholder name, CoA: EffectNULL
+    &Spell::EffectNULL,                                     //198 SPELL_EFFECT_ASCENSION_198                      placeholder name
 };
 
 static_assert(std::size(SpellEffects) == std::size_t(TOTAL_SPELL_EFFECTS),

@@ -67,7 +67,13 @@
 //  see: https://github.com/azerothcore/azerothcore-wotlk/issues/9766
 #include "GridNotifiersImpl.h"
 
-pEffect SpellEffects[TOTAL_SPELL_EFFECTS] =
+// One handler per effect id, indexed by SpellEffectInfo::Effect.
+// The bound is deduced from the initializer on purpose: with an explicit
+// [TOTAL_SPELL_EFFECTS] bound a short list compiles silently and leaves the
+// tail nullptr, which Spell::HandleEffects would call. The static_assert below
+// the table makes a missing (or extra) entry a compile error instead.
+// Spell.cpp declares this table extern without a bound (see the note there).
+pEffect SpellEffects[] =
 {
     &Spell::EffectNULL,                                     //  0
     &Spell::EffectInstaKill,                                //  1 SPELL_EFFECT_INSTAKILL
@@ -235,6 +241,9 @@ pEffect SpellEffects[TOTAL_SPELL_EFFECTS] =
     &Spell::EffectNULL,                                     //163 unused
     &Spell::EffectRemoveAura,                               //164 SPELL_EFFECT_REMOVE_AURA
 };
+
+static_assert(std::size(SpellEffects) == std::size_t(TOTAL_SPELL_EFFECTS),
+    "SpellEffects must have exactly one handler per effect id (0 .. TOTAL_SPELL_EFFECTS - 1)");
 
 void Spell::EffectNULL(SpellEffIndex /*effIndex*/)
 {

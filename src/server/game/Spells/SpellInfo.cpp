@@ -613,8 +613,30 @@ ImmunityInfo const* SpellEffectInfo::GetImmunityInfo() const
     return _spellInfo->GetImmunityInfo(EffectIndex);
 }
 
-std::array<SpellEffectInfo::StaticData, TOTAL_SPELL_EFFECTS> SpellEffectInfo::_data =
-{ {
+namespace
+{
+    // Aggregate initialization of a std::array<T, Size> accepts a shorter list
+    // and silently value-initializes the missing tail. Taking the rows as
+    // T const (&)[N] deduces N from the number of rows instead, so a table that
+    // is not exactly Size rows long is a compile error.
+    template<std::size_t Size, typename T, std::size_t N>
+    constexpr std::array<T, Size> MakeFullTable(T const (&rows)[N])
+    {
+        static_assert(N == Size, "the table must have exactly one row per id");
+
+        std::array<T, Size> table{};
+        for (std::size_t i = 0; i < N; ++i)
+            table[i] = rows[i];
+
+        return table;
+    }
+}
+
+// One row per effect id, read unchecked as _data[Effect] by
+// GetImplicitTargetType() and GetUsedTargetObjectType(), so it is built through
+// MakeFullTable: a missing row is a compile error, not a zeroed tail.
+std::array<SpellEffectInfo::StaticData, TOTAL_SPELL_EFFECTS> SpellEffectInfo::_data = MakeFullTable<TOTAL_SPELL_EFFECTS, SpellEffectInfo::StaticData>(
+{
     // implicit target type           used target object type
     {EFFECT_IMPLICIT_TARGET_NONE,     TARGET_OBJECT_TYPE_NONE}, // 0
     {EFFECT_IMPLICIT_TARGET_EXPLICIT, TARGET_OBJECT_TYPE_UNIT}, // 1 SPELL_EFFECT_INSTAKILL
@@ -781,7 +803,7 @@ std::array<SpellEffectInfo::StaticData, TOTAL_SPELL_EFFECTS> SpellEffectInfo::_d
     {EFFECT_IMPLICIT_TARGET_EXPLICIT, TARGET_OBJECT_TYPE_UNIT}, // 162 SPELL_EFFECT_TALENT_SPEC_SELECT
     {EFFECT_IMPLICIT_TARGET_EXPLICIT, TARGET_OBJECT_TYPE_UNIT}, // 163 SPELL_EFFECT_163
     {EFFECT_IMPLICIT_TARGET_EXPLICIT, TARGET_OBJECT_TYPE_UNIT}, // 164 SPELL_EFFECT_REMOVE_AURA
-} };
+});
 
 SpellInfo::SpellInfo(SpellEntry const* spellEntry)
 {

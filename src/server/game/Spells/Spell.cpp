@@ -62,7 +62,11 @@
 #include "IVMapMgr.h"
 #include "VMapMgr2.h"
 
-extern pEffect SpellEffects[TOTAL_SPELL_EFFECTS];
+// Defined in SpellEffects.cpp, where a static_assert pins its size to
+// TOTAL_SPELL_EFFECTS. Declared without a bound on purpose: a bound here, if it
+// were ever visible to the definition, would size a short table up silently
+// and make that static_assert pass.
+extern pEffect SpellEffects[];
 
 SpellDestination::SpellDestination()
 {

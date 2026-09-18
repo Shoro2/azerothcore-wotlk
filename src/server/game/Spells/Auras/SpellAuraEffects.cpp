@@ -60,7 +60,12 @@ class Aura;
 // because for change amount operation packets will not be send
 // aura effect handlers shouldn't contain any AuraEffect or Aura object modifications
 
-pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS] =
+// One handler per aura type, indexed by AuraEffect::GetAuraType().
+// The bound is deduced from the initializer on purpose: with an explicit
+// [TOTAL_AURAS] bound a short list compiles silently and leaves the tail
+// nullptr. The static_assert below the table makes a missing (or extra)
+// entry a compile error instead.
+pAuraEffectHandler AuraEffectHandler[] =
 {
     &AuraEffect::HandleNULL,                                      //  0 SPELL_AURA_NONE
     &AuraEffect::HandleBindSight,                                 //  1 SPELL_AURA_BIND_SIGHT
@@ -380,6 +385,9 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS] =
     &AuraEffect::HandleNoImmediateEffect,                         //315 SPELL_AURA_UNDERWATER_WALKING todo
     &AuraEffect::HandleNoImmediateEffect,                         //316 SPELL_AURA_PERIODIC_HASTE implemented in AuraEffect::CalculatePeriodic
 };
+
+static_assert(std::size(AuraEffectHandler) == std::size_t(TOTAL_AURAS),
+    "AuraEffectHandler must have exactly one handler per aura type (0 .. TOTAL_AURAS - 1)");
 
 AuraEffect::AuraEffect(Aura* base, uint8 effIndex, int32* baseAmount, Unit* caster):
     m_base(base), m_spellInfo(base->GetSpellInfo()),

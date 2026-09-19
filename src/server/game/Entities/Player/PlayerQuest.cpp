@@ -22,6 +22,7 @@
 #include "GameTime.h"
 #include "GitRevision.h"
 #include "GossipDef.h"
+#include "LocalLevelScaling.h"
 #include "Group.h"
 #include "MapMgr.h"
 #include "Player.h"
@@ -36,6 +37,15 @@
 /*********************************************************/
 /***                    QUEST SYSTEM                   ***/
 /*********************************************************/
+
+int32 Player::GetQuestLevel(Quest const* quest) const
+{
+    if (!quest)
+        return GetLevel();
+    if (LocalLevelScaling::QuestEnabled.load(std::memory_order_relaxed))
+        return LocalLevelScaling::ScaleQuestLevel(quest->GetQuestLevel(), GetLevel());
+    return quest->GetQuestLevel() > 0 ? quest->GetQuestLevel() : GetLevel();
+}
 
 void Player::PrepareQuestMenu(ObjectGuid guid)
 {
@@ -1481,7 +1491,12 @@ uint32 Player::CalculateQuestRewardXP(Quest const* quest)
     uint32 xp = uint32(quest->XPValue(level) * GetQuestRate(quest->IsDFQuest()));
 
     // handle SPELL_AURA_MOD_XP_QUEST_PCT auras
-    xp *= GetTotalAuraMultiplier(SPELL_AURA_MOD_XP_QUEST_PCT);
+    bool const recruitAFriend = GetsRecruitAFriendBonus(true);
+    xp *= GetTotalAuraMultiplier(SPELL_AURA_MOD_XP_QUEST_PCT, [recruitAFriend](AuraEffect const* effect)
+    {
+        // CoA's party Aura of Experience explicitly excludes the recruit-a-friend bonus.
+        return effect->GetId() != 818059 || !recruitAFriend;
+    });
 
     return xp;
 }

@@ -37,6 +37,13 @@ enum AllSpellHook
     ALLSPELLHOOK_ON_CAST_CANCEL,
     ALLSPELLHOOK_ON_CAST,
     ALLSPELLHOOK_ON_PREPARE,
+    ALLSPELLHOOK_ON_BEFORE_EFFECTS,
+    ALLSPELLHOOK_ON_CALCULATED_TARGET,
+    ALLSPELLHOOK_ON_HIT_RESULT,
+    ALLSPELLHOOK_ON_SUCCESSFUL_INTERRUPT,
+    ALLSPELLHOOK_ON_SUCCESSFUL_STEAL,
+    ALLSPELLHOOK_ON_CRIT_CHANCE,
+    ALLSPELLHOOK_ON_INTERRUPT_DURATION,
     ALLSPELLHOOK_END
 };
 
@@ -103,6 +110,31 @@ public:
     virtual void OnSpellCast(Spell* /*spell*/, Unit* /*caster*/, SpellInfo const* /*spellInfo*/, bool /*skipCheck*/) { }
 
     virtual void OnSpellPrepare(Spell* /*spell*/, Unit* /*caster*/, SpellInfo const* /*spellInfo*/) { }
+
+    // Called after cast validation and target selection, immediately before
+    // launch effects are calculated.
+    virtual void OnSpellBeforeEffects(Spell* /*spell*/, Unit* /*caster*/, SpellInfo const* /*spellInfo*/) { }
+
+    // Called after one unit target's launch damage/healing and critical result
+    // have been calculated, but before those values are applied.
+    virtual void OnSpellCalculatedTarget(Spell* /*spell*/, Unit* /*target*/, TargetInfo& /*targetInfo*/) { }
+
+    // Called after one unit target has finished hit processing. missInfo is a
+    // SpellMissInfo value; damage and healing are the final applied amounts.
+    virtual void OnSpellHitResult(Spell* /*spell*/, Unit* /*target*/, uint8 /*missInfo*/,
+        uint32 /*damage*/, uint32 /*healing*/, bool /*critical*/) { }
+
+    // Called once per target after at least one interruptible cast was
+    // actually interrupted. A landed interrupt on an idle target is not enough.
+    virtual void OnSpellSuccessfulInterrupt(Spell* /*spell*/, Unit* /*target*/) { }
+
+    virtual void OnSpellInterruptDuration(Spell* /*spell*/, Unit* /*target*/, int32& /*duration*/) { }
+
+    // A completed native beneficial-aura steal, after its success list was applied.
+    virtual void OnSpellSuccessfulSteal(Spell* /*spell*/, Unit* /*target*/, uint32 /*count*/) { }
+
+    // After caster critical chance, before target resistance and the single native roll.
+    virtual void OnSpellCritChance(Spell* /*spell*/, Unit* /*target*/, float& /*chance*/) { }
 };
 
 // Compatibility for old scripts

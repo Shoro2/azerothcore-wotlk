@@ -17,6 +17,7 @@
 
 #include "Spell.h"
 #include "ArenaSpectator.h"
+#include "AscensionPooledVitality.h"
 #include "BattlefieldMgr.h"
 #include "Battleground.h"
 #include "CharmInfo.h"
@@ -585,6 +586,7 @@ Spell::Spell(Unit* caster, SpellInfo const* info, TriggerCastFlags triggerFlags,
     m_needComboPoints = m_spellInfo->NeedsComboPoints();
     m_comboPointGain = 0;
     m_comboTarget = nullptr;
+    m_scriptEventMask = 0;
     m_delayStart = 0;
     m_delayAtDamageCount = 0;
 
@@ -2633,6 +2635,9 @@ void Spell::DoAllEffectOnTarget(TargetInfo* target)
         return;
 
     SpellMissInfo missInfo = target->missCondition;
+    SpellMissInfo scriptMissInfo = missInfo;
+    uint32 scriptDamageResult = 0;
+    m_scriptHealthLeechDamage = 0;
 
     // Need init unitTarget by default unit (can changed in code on reflect)
     // Or on missInfo != SPELL_MISS_NONE unitTarget undefined (but need in trigger subsystem)
@@ -2693,6 +2698,9 @@ void Spell::DoAllEffectOnTarget(TargetInfo* target)
         m_reflectionTargetPosition = Position();
         if (missInfo2 != SPELL_MISS_NONE)
         {
+            // Preserve native proc/miss policy, but tell observers about a
+            // late immunity or other failure after the projectile launched.
+            scriptMissInfo = missInfo2;
             if (missInfo2 != SPELL_MISS_MISS)
                 m_caster->SendSpellMiss(spellHitTarget, m_spellInfo->Id, missInfo2);
             m_damage = 0;
@@ -2832,6 +2840,7 @@ void Spell::DoAllEffectOnTarget(TargetInfo* target)
         if (unitTarget->IsImmunedToDamage(caster, m_spellInfo))
         {
             m_damage = 0;
+            scriptMissInfo = SPELL_MISS_IMMUNE;
 
             // no packet found in sniffs
         }
@@ -2895,7 +2904,12 @@ void Spell::DoAllEffectOnTarget(TargetInfo* target)
 
             procVictim |= PROC_FLAG_TAKEN_DAMAGE;
 
-            caster->DealSpellDamage(&damageInfo, true, this);
+            // Match native leech's pre-damage health cap. Keep the resolved
+            // damage result for other scripts, and do not infer damage from
+            // later health deltas that can include triggered heals or damage.
+            uint32 const healthBeforeDamage = unitTarget->GetHealth();
+            caster->DealSpellDamage(&damageInfo, true, this, &scriptDamageResult);
+            m_scriptHealthLeechDamage = std::min(scriptDamageResult, healthBeforeDamage);
 
             // do procs after damage, eg healing effects
             // no need to check if target is alive, done in procdamageandspell
@@ -2992,6 +3006,11 @@ void Spell::DoAllEffectOnTarget(TargetInfo* target)
 
         CallScriptAfterHitHandlers();
     }
+
+    sScriptMgr->OnSpellHitResult(this, spellHitTarget ? spellHitTarget : effectUnit,
+        uint8(scriptMissInfo == SPELL_MISS_NONE ? missInfo : scriptMissInfo), scriptDamageResult,
+        m_healing > 0 ? uint32(m_healing) : 0,
+        target->crit || GetSpellValue()->ForcedCritResult);
 }
 
 SpellMissInfo Spell::DoSpellHitOnUnit(Unit* unit, uint32 effectMask, bool scaleAura)
@@ -3514,7 +3533,9 @@ SpellCastResult Spell::prepare(SpellCastTargets const* targets, AuraEffect const
     }
 
     //Prevent casting at cast another spell (ServerSide check)
-    if (!HasTriggeredCastFlag(TRIGGERED_IGNORE_CAST_IN_PROGRESS) && m_caster->IsNonMeleeSpellCast(false, true, true, m_spellInfo->Id == 75) && m_cast_count)
+    if (!HasTriggeredCastFlag(TRIGGERED_IGNORE_CAST_IN_PROGRESS) &&
+        !m_caster->CanCastDuringChannel(m_spellInfo) &&
+        m_caster->IsNonMeleeSpellCast(false, true, true, m_spellInfo->Id == 75) && m_cast_count)
     {
         SendCastResult(SPELL_FAILED_SPELL_IN_PROGRESS);
         finish(false);
@@ -3566,7 +3587,9 @@ SpellCastResult Spell::prepare(SpellCastTargets const* targets, AuraEffect const
 
     // don't allow channeled spells / spells with cast time to be casted while moving
     // (even if they are interrupted on moving, spells with almost immediate effect get to have their effect processed before movement interrupter kicks in)
-    if ((m_spellInfo->IsChanneled() || m_casttime) && m_caster->IsPlayer() && m_caster->isMoving() && m_spellInfo->InterruptFlags & SPELL_INTERRUPT_FLAG_MOVEMENT && !IsTriggered())
+    if ((m_spellInfo->IsChanneled() || m_casttime) && m_caster->IsPlayer() && m_caster->isMoving() &&
+        m_spellInfo->InterruptFlags & SPELL_INTERRUPT_FLAG_MOVEMENT && !IsTriggered() &&
+        !m_caster->HasManastormMovementGrace() && !m_caster->CanCastSpellWhileMoving(m_spellInfo))
     {
         // Custom: skip movement interrupt if caster has "Cast While Moving" aura (901100)
         if (!m_caster->HasAura(901100))
@@ -3651,7 +3674,9 @@ SpellCastResult Spell::prepare(SpellCastTargets const* targets, AuraEffect const
     //Containers for channeled spells have to be set
     //TODO:Apply this to all casted spells if needed
     // Why check duration? 29350: channelled triggers channelled
-    if (HasTriggeredCastFlag(TRIGGERED_CAST_DIRECTLY) && (!m_spellInfo->IsChanneled() || !m_spellInfo->GetMaxDuration()))
+    if ((HasTriggeredCastFlag(TRIGGERED_CAST_DIRECTLY) && (!m_spellInfo->IsChanneled() || !m_spellInfo->GetMaxDuration())) ||
+        (m_caster->IsPlayer() && m_caster->getClass() == CLASS_NECROMANCER && m_spellInfo->Id == 500991) ||
+        (m_caster->IsPlayer() && m_caster->getClass() == CLASS_STARCALLER && m_spellInfo->Id == 800386))
         cast(true);
     else
     {
@@ -3954,6 +3979,8 @@ void Spell::_cast(bool skipCheck)
         modOwner->SetSpellModTakingSpell(this, true);
 
     PrepareScriptHitHandlers();
+
+    sScriptMgr->OnSpellBeforeEffects(this, m_caster, m_spellInfo);
 
     HandleLaunchPhase();
 
@@ -4417,7 +4444,9 @@ void Spell::update(uint32 difftime)
     // check if the player caster has moved before the spell finished
     // xinef: added preparing state (real cast, skip channels as they have other flags for this)
     if ((m_caster->IsPlayer() && m_timer != 0) &&
-            m_caster->isMoving() && (m_spellInfo->InterruptFlags & SPELL_INTERRUPT_FLAG_MOVEMENT) && m_spellState == SPELL_STATE_PREPARING &&
+            m_caster->isMoving() && !m_caster->HasManastormMovementGrace() &&
+            !m_caster->CanCastSpellWhileMoving(m_spellInfo) &&
+            (m_spellInfo->InterruptFlags & SPELL_INTERRUPT_FLAG_MOVEMENT) && m_spellState == SPELL_STATE_PREPARING &&
             (m_spellInfo->Effects[0].Effect != SPELL_EFFECT_STUCK || !m_caster->HasUnitMovementFlag(MOVEMENTFLAG_FALLING_FAR)))
     {
         // Custom: skip movement interrupt if caster has "Cast While Moving" aura (901100)
@@ -4941,6 +4970,12 @@ void Spell::SendSpellGo()
 
 void Spell::WriteAmmoToPacket(WorldPacket* data)
 {
+    // This client repurposes the stock WotLK fallback display rows 5996/5998.
+    // Its verified ArrowFlight/BulletFlight rows keep no-ammo ranged attacks
+    // visible without changing any spell-specific missile or visual record.
+    constexpr uint32 ASCENSION_ARROW_PROJECTILE_DISPLAY_ID = 3482;
+    constexpr uint32 ASCENSION_BULLET_PROJECTILE_DISPLAY_ID = 3483;
+
     uint32 ammoInventoryType = 0;
     uint32 ammoDisplayID = 0;
 
@@ -4964,9 +4999,13 @@ void Spell::WriteAmmoToPacket(WorldPacket* data)
                         ammoInventoryType = pProto->InventoryType;
                     }
                 }
-                else if (m_caster->HasAura(46699))      // Requires No Ammo
+                else if (m_caster->HasAura(46699) || (IsAscensionClass(m_caster->getClass()) &&
+                    (pItem->GetTemplate()->SubClass == ITEM_SUBCLASS_WEAPON_BOW ||
+                     pItem->GetTemplate()->SubClass == ITEM_SUBCLASS_WEAPON_GUN ||
+                     pItem->GetTemplate()->SubClass == ITEM_SUBCLASS_WEAPON_CROSSBOW))) // Requires No Ammo
                 {
-                    ammoDisplayID = 5996;                   // normal arrow
+                    ammoDisplayID = pItem->GetTemplate()->SubClass == ITEM_SUBCLASS_WEAPON_GUN ?
+                        ASCENSION_BULLET_PROJECTILE_DISPLAY_ID : ASCENSION_ARROW_PROJECTILE_DISPLAY_ID;
                     ammoInventoryType = INVTYPE_AMMO;
                 }
             }
@@ -4992,11 +5031,11 @@ void Spell::WriteAmmoToPacket(WorldPacket* data)
                                 break;
                             case ITEM_SUBCLASS_WEAPON_BOW:
                             case ITEM_SUBCLASS_WEAPON_CROSSBOW:
-                                ammoDisplayID = 5996;       // is this need fixing?
+                                ammoDisplayID = ASCENSION_ARROW_PROJECTILE_DISPLAY_ID;
                                 ammoInventoryType = INVTYPE_AMMO;
                                 break;
                             case ITEM_SUBCLASS_WEAPON_GUN:
-                                ammoDisplayID = 5998;       // is this need fixing?
+                                ammoDisplayID = ASCENSION_BULLET_PROJECTILE_DISPLAY_ID;
                                 ammoInventoryType = INVTYPE_AMMO;
                                 break;
                             default:
@@ -5018,6 +5057,9 @@ void Spell::WriteAmmoToPacket(WorldPacket* data)
             ammoInventoryType = nonRangedAmmoInventoryType;
         }
     }
+
+    if (Player* player = m_caster->ToPlayer())
+        sScriptMgr->OnPlayerGetAmmoDisplay(player, m_spellInfo, ammoDisplayID, ammoInventoryType);
 
     *data << uint32(ammoDisplayID);
     *data << uint32(ammoInventoryType);
@@ -5368,7 +5410,11 @@ void Spell::TakePower()
     // health as power used
     if (PowerType == POWER_HEALTH)
     {
-        m_caster->ModifyHealth(-(int32)m_powerCost);
+        int32 spent = m_caster->ModifyHealth(-(int32)m_powerCost);
+        if (spent < 0 && m_caster->IsPlayer() && m_caster->getClass() == CLASS_SON_OF_ARUGAL &&
+            m_spellInfo->SpellFamilyName == 26 && !IsTriggered() &&
+            m_caster->HasAura(AscensionBloodmage::PooledVitalityTalent))
+            SetScriptValue(AscensionBloodmage::PooledVitality, 1);
         return;
     }
 
@@ -5392,6 +5438,9 @@ void Spell::TakePower()
 
 void Spell::TakeAmmo()
 {
+    if (m_caster->IsPlayer() && IsAscensionClass(m_caster->getClass()))
+        return;
+
     if (m_attackType == RANGED_ATTACK && m_caster->IsPlayer() && !m_spellInfo->HasAttribute(SPELL_ATTR6_DO_NOT_CONSUME_RESOURCES))
     {
         Item* pItem = m_caster->ToPlayer()->GetWeaponForAttack(RANGED_ATTACK);
@@ -5668,7 +5717,10 @@ void Spell::HandleEffects(Unit* pUnitTarget, Item* pItemTarget, GameObject* pGOT
 
     if (!preventDefault && eff < TOTAL_SPELL_EFFECTS)
     {
-        (this->*SpellEffects[eff])((SpellEffIndex)i);
+        pEffect handler = SpellEffects[eff];
+        if (!handler)
+            handler = &Spell::EffectNULL;
+        (this->*handler)((SpellEffIndex)i);
     }
 }
 
@@ -5830,7 +5882,8 @@ SpellCastResult Spell::CheckCast(bool strict, uint32* /*param1*/, uint32* /*para
 
     // cancel autorepeat spells if cast start when moving
     // (not wand currently autorepeat cast delayed to moving stop anyway in spell update code)
-    if (m_caster->IsPlayer() && m_caster->ToPlayer()->isMoving() && !IsTriggered())
+    if (m_caster->IsPlayer() && m_caster->ToPlayer()->isMoving() && !IsTriggered() &&
+        !m_caster->CanCastSpellWhileMoving(m_spellInfo))
     {
         // skip stuck spell to allow use it in falling case and apply spell limitations at movement
         if ((!m_caster->HasUnitMovementFlag(MOVEMENTFLAG_FALLING_FAR) || m_spellInfo->Effects[0].Effect != SPELL_EFFECT_STUCK) &&
@@ -6028,9 +6081,18 @@ SpellCastResult Spell::CheckCast(bool strict, uint32* /*param1*/, uint32* /*para
             return locRes;
     }
 
-    // not let players cast spells at mount (and let do it to creatures)
+    // Divine Charge explicitly permits its recipients to cast on the finite steed.
+    Aura const* divineCharge = m_caster->GetAura(527272);
+    Unit const* divineCaster = divineCharge ? divineCharge->GetCaster() : nullptr;
+    bool divineSteed = divineCaster && divineCaster->IsPlayer() && divineCaster->getClass() == CLASS_MONK &&
+        m_caster->GetMountID() == 14584 && !m_caster->IsInFlight();
+    bool tinkerMechsuit = m_caster->IsPlayer() && m_caster->getClass() == CLASS_TINKER &&
+        m_spellInfo->SpellFamilyName == 34 && !m_caster->IsInFlight() &&
+        m_caster->HasAura(801384, m_caster->GetGUID()) && m_caster->HasAura(803451, m_caster->GetGUID());
     if (m_caster->IsMounted() && m_caster->IsPlayer() && !HasTriggeredCastFlag(TRIGGERED_IGNORE_CASTER_MOUNTED_OR_ON_VEHICLE) &&
-            !m_spellInfo->IsPassive() && !m_spellInfo->HasAttribute(SPELL_ATTR0_ALLOW_WHILE_MOUNTED))
+            !m_spellInfo->IsPassive() && !m_spellInfo->HasAttribute(SPELL_ATTR0_ALLOW_WHILE_MOUNTED) && !divineSteed &&
+            !tinkerMechsuit &&
+            !(m_caster->getClass() == CLASS_STARCALLER && m_caster->HasAura(704772) && !m_caster->IsInFlight()))
     {
         if (m_caster->IsInFlight())
             return SPELL_FAILED_NOT_ON_TAXI;
@@ -6702,6 +6764,8 @@ SpellCastResult Spell::CheckCast(bool strict, uint32* /*param1*/, uint32* /*para
                 }
             case SPELL_AURA_MOUNTED:
                 {
+                    if (m_caster->HasAura(300513))
+                        return SPELL_FAILED_CASTER_AURASTATE;
                     // Disallow casting flying mounts in water
                     if (m_caster->IsInWater() && m_spellInfo->HasAura(SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED))
                         return SPELL_FAILED_ONLY_ABOVEWATER;
@@ -7094,6 +7158,14 @@ bool Spell::CanAutoCast(Unit* target)
 
 SpellCastResult Spell::CheckRange(bool strict)
 {
+    // A companion's synchronous skinning cast uses the same scoped reach as its loot collection.
+    // Spell admission still performs the native skinning/corpse/skill checks below CheckRange.
+    if (IsTriggered() && m_spellInfo->HasEffect(SPELL_EFFECT_SKINNING))
+        if (Player* player = m_caster->ToPlayer())
+            if (Unit* target = m_targets.GetUnitTarget(); target && target->IsCreature() &&
+                player->IsWithinLootDistance(target->ToCreature()))
+                return SPELL_CAST_OK;
+
     // Don't check for instant cast spells
     if (!strict && m_casttime == 0)
         return SPELL_CAST_OK;
@@ -7155,7 +7227,7 @@ SpellCastResult Spell::CheckRange(bool strict)
         }
 
         // Check min range - for ranged spells, min range is the spell's min range + melee range (no leeway)
-        if (range_type == SPELL_RANGE_RANGED)
+        if (range_type == SPELL_RANGE_RANGED && !m_caster->IgnoresSpellMinRange(m_spellInfo))
         {
             float minRangeCombined = min_range + m_caster->GetMeleeRange(target);
             if (m_caster->IsWithinRange(target, minRangeCombined))
@@ -7709,6 +7781,11 @@ SpellCastResult Spell::CheckItems(uint32* param1, uint32* param2)
                     Item* pItem = m_caster->ToPlayer()->GetWeaponForAttack(m_attackType);
                     if (!pItem || pItem->IsBroken())
                         return SPELL_FAILED_EQUIPPED_ITEM;
+
+                    // Keep the real ranged-weapon/broken-item checks above.
+                    // Custom classes do not require or consume projectile stacks.
+                    if (IsAscensionClass(m_caster->getClass()))
+                        break;
 
                     switch (pItem->GetTemplate()->SubClass)
                     {
@@ -8451,8 +8528,10 @@ void Spell::DoAllEffectOnLaunchTarget(TargetInfo& targetInfo, float* multiplier)
         caster = m_originalCaster;
 
     float critChance = caster->SpellDoneCritChance(unit, m_spellInfo, m_spellSchoolMask, m_attackType, false);
+    sScriptMgr->OnSpellCritChance(this, unit, critChance);
     critChance = unit->SpellTakenCritChance(caster, m_spellInfo, m_spellSchoolMask, critChance, m_attackType, false);
     targetInfo.crit = roll_chance_f(std::max(0.0f, critChance));
+    sScriptMgr->OnSpellCalculatedTarget(this, unit, targetInfo);
 }
 
 SpellCastResult Spell::CanOpenLock(uint32 effIndex, uint32 lockId, SkillType& skillId, int32& reqSkillValue, int32& skillValue)
@@ -8529,6 +8608,31 @@ SpellCastResult Spell::CanOpenLock(uint32 effIndex, uint32 lockId, SkillType& sk
     return SPELL_CAST_OK;
 }
 
+void Spell::SetScriptWeaponDamageMultiplier(float multiplier)
+{
+    // Preserve fractional weapon percentages until the native weapon roll is
+    // scaled. Later changes would disagree with damage already calculated.
+    if ((m_spellState != SPELL_STATE_NULL && m_spellState != SPELL_STATE_PREPARING) ||
+        m_spellInfo->DmgClass != SPELL_DAMAGE_CLASS_MELEE ||
+        !m_spellInfo->HasEffect(SPELL_EFFECT_WEAPON_PERCENT_DAMAGE) ||
+        !std::isfinite(multiplier) || multiplier < 0.0f)
+        return;
+
+    m_scriptWeaponDamageMultiplier = multiplier;
+}
+
+void Spell::SetScriptMeleeAttackType(int32 attackType)
+{
+    // Unit::CastSpell supplies custom values before prepare. Changing hands
+    // later would disagree with the already prepared hit and proc context.
+    if (m_spellState != SPELL_STATE_NULL || m_spellInfo->DmgClass != SPELL_DAMAGE_CLASS_MELEE ||
+        (attackType != BASE_ATTACK && attackType != OFF_ATTACK))
+        return;
+
+    m_scriptMeleeAttackType = WeaponAttackType(attackType);
+    m_attackType = m_scriptMeleeAttackType;
+}
+
 void Spell::SetSpellValue(SpellValueMod mod, int32 value)
 {
     switch (mod)
@@ -8565,6 +8669,9 @@ void Spell::SetSpellValue(SpellValueMod mod, int32 value)
             break;
         case SPELLVALUE_MISCVALUE2:
             m_spellValue->MiscVal[2] = value;
+            break;
+        case SPELLVALUE_MELEE_ATTACK_TYPE:
+            SetScriptMeleeAttackType(value);
             break;
     }
 }

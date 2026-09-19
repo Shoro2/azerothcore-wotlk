@@ -29,6 +29,16 @@ void ScriptMgr::OnDamage(Unit* attacker, Unit* victim, uint32& damage)
     CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_ON_DAMAGE, script->OnDamage(attacker, victim, damage));
 }
 
+void ScriptMgr::OnBlock(Unit* victim, Unit* attacker)
+{
+    CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_ON_BLOCK, script->OnBlock(victim, attacker));
+}
+
+void ScriptMgr::OnPeriodicDamageResult(Unit* target, Unit* attacker, uint32 damage, SpellInfo const* spellInfo)
+{
+    CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_ON_PERIODIC_DAMAGE_RESULT, script->OnPeriodicDamageResult(target, attacker, damage, spellInfo));
+}
+
 void ScriptMgr::ModifyPeriodicDamageAurasTick(Unit* target, Unit* attacker, uint32& damage, SpellInfo const* spellInfo)
 {
     CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_MODIFY_PERIODIC_DAMAGE_AURAS_TICK, script->ModifyPeriodicDamageAurasTick(target, attacker, damage, spellInfo));
@@ -42,6 +52,13 @@ void ScriptMgr::ModifyMeleeDamage(Unit* target, Unit* attacker, uint32& damage)
 void ScriptMgr::ModifySpellDamageTaken(Unit* target, Unit* attacker, int32& damage, SpellInfo const* spellInfo)
 {
     CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_MODIFY_SPELL_DAMAGE_TAKEN, script->ModifySpellDamageTaken(target, attacker, damage, spellInfo));
+}
+
+void ScriptMgr::ModifySpellEffectBaseValue(Unit const* caster, SpellInfo const* spellInfo,
+    uint8 effectIndex, float& value)
+{
+    CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_MODIFY_SPELL_EFFECT_BASE_VALUE,
+        script->ModifySpellEffectBaseValue(caster, spellInfo, effectIndex, value));
 }
 
 void ScriptMgr::ModifyHealReceived(Unit* target, Unit* healer, uint32& heal, SpellInfo const* spellInfo)
@@ -79,9 +96,28 @@ void ScriptMgr::OnAuraRemove(Unit* unit, AuraApplication* aurApp, AuraRemoveMode
     CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_ON_AURA_REMOVE, script->OnAuraRemove(unit, aurApp, mode));
 }
 
+void ScriptMgr::OnSendAuraUpdate(Unit* target, Player* receiver, AuraApplication const* application, bool remove)
+{
+    CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_ON_SEND_AURA_UPDATE,
+        script->OnSendAuraUpdate(target, receiver, application, remove));
+}
+
 bool ScriptMgr::IfNormalReaction(Unit const* unit, Unit const* target, ReputationRank& repRank)
 {
     CALL_ENABLED_BOOLEAN_HOOKS(UnitScript, UNITHOOK_IF_NORMAL_REACTION, !script->IfNormalReaction(unit, target, repRank));
+}
+
+bool ScriptMgr::CanUnitAttack(Unit const* attacker, Unit const* target, SpellInfo const* spell)
+{
+    CALL_ENABLED_BOOLEAN_HOOKS(UnitScript, UNITHOOK_CAN_UNIT_ATTACK, !script->CanUnitAttack(attacker, target, spell));
+}
+
+Unit* ScriptMgr::SpellMagnetTarget(Unit* attacker, Unit* victim, SpellInfo const* spell)
+{
+    Unit* result = nullptr;
+    CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_SPELL_MAGNET_TARGET,
+        if (!result) result = script->SpellMagnetTarget(attacker, victim, spell));
+    return result;
 }
 
 bool ScriptMgr::CanSetPhaseMask(Unit const* unit, uint32 newPhaseMask, bool update)

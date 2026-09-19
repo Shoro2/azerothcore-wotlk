@@ -171,7 +171,7 @@ void WorldSession::HandleLootMoneyOpcode(WorldPacket& /*recvData*/)
             {
                 Creature* creature = player->GetMap()->GetCreature(guid);
                 bool lootAllowed = creature && creature->IsAlive() == (player->IsClass(CLASS_ROGUE, CLASS_CONTEXT_ABILITY) && creature->loot.loot_type == LOOT_PICKPOCKETING);
-                if (lootAllowed && creature->IsWithinDistInMap(player, INTERACTION_DISTANCE))
+                if (lootAllowed && player->IsWithinLootDistance(creature))
                 {
                     loot = &creature->loot;
                     if (creature->IsAlive())
@@ -431,7 +431,17 @@ void WorldSession::DoLootRelease(ObjectGuid lguid)
         }
         else if (pItem->loot.isLooted() || !proto->HasFlag(ITEM_FLAG_HAS_LOOT))
         {
-            player->DestroyItem(pItem->GetBagSlot(), pItem->GetSlot(), true);
+            if (proto->HasFlag(ITEM_FLAG_HAS_LOOT) && pItem->GetCount() > 1)
+            {
+                // One loot window belongs to one container, even when the containers stack.
+                sLootItemStorage->RemoveStoredLoot(pItem->GetGUID());
+                pItem->m_lootGenerated = false;
+                pItem->loot.clear();
+                uint32 count = 1;
+                player->DestroyItemCount(pItem, count, true);
+            }
+            else
+                player->DestroyItem(pItem->GetBagSlot(), pItem->GetSlot(), true);
             return;
         }
     }
@@ -440,7 +450,7 @@ void WorldSession::DoLootRelease(ObjectGuid lguid)
         Creature* creature = GetPlayer()->GetMap()->GetCreature(lguid);
 
         bool lootAllowed = creature && creature->IsAlive() == (player->IsClass(CLASS_ROGUE, CLASS_CONTEXT_ABILITY) && creature->loot.loot_type == LOOT_PICKPOCKETING);
-        if (!lootAllowed || !creature->IsWithinDistInMap(_player, INTERACTION_DISTANCE))
+        if (!lootAllowed || !player->IsWithinLootDistance(creature))
             return;
 
         loot = &creature->loot;

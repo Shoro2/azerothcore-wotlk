@@ -1731,9 +1731,13 @@ void ObjectMgr::LoadCreatureModelInfo()
     {
         Field* fields = result->Fetch();
 
-        uint32 displayId = fields[0].Get<uint32>();
-        CreatureDisplayInfoEntry const* creatureDisplay = sCreatureDisplayInfoStore.LookupEntry(displayId);
         uint32 modelId = fields[0].Get<uint32>();
+        CreatureDisplayInfoEntry const* creatureDisplay = sCreatureDisplayInfoStore.LookupEntry(modelId);
+        if (!creatureDisplay)
+        {
+            LOG_ERROR("sql.sql", "Table `creature_model_info` references missing display id ({}), skipping.", modelId);
+            continue;
+        }
 
         CreatureModelInfo& modelInfo = _creatureModelStore[modelId];
 
@@ -1744,9 +1748,6 @@ void ObjectMgr::LoadCreatureModelInfo()
         modelInfo.is_trigger           = false;
 
         // Checks
-
-        if (!creatureDisplay)
-            LOG_ERROR("sql.sql", "Table `creature_model_info` has model for not existed display id ({}).", modelId);
 
         if (modelInfo.gender > GENDER_NONE)
         {
@@ -3382,7 +3383,7 @@ void ObjectMgr::LoadItemTemplates()
         itemTemplate.BuyPrice                  = int32(fields[10].Get<int64>());
         itemTemplate.SellPrice                 = uint32(fields[11].Get<uint32>());
         itemTemplate.InventoryType             = uint32(fields[12].Get<uint8>());
-        itemTemplate.AllowableClass            = fields[13].Get<int32>();
+        itemTemplate.AllowableClass            = GetItemAllowableClassMask(fields[13].Get<int32>());
         itemTemplate.AllowableRace             = fields[14].Get<int32>();
         itemTemplate.ItemLevel                 = uint32(fields[15].Get<uint16>());
         itemTemplate.RequiredLevel             = uint32(fields[16].Get<uint8>());
@@ -3475,7 +3476,7 @@ void ObjectMgr::LoadItemTemplates()
         itemTemplate.RequiredDisenchantSkill = uint32(fields[126].Get<int16>());
         itemTemplate.ArmorDamageModifier     = fields[127].Get<float>();
         itemTemplate.Duration                = fields[128].Get<uint32>();
-        itemTemplate.ItemLimitCategory       = uint32(fields[129].Get<int16>());
+        itemTemplate.ItemLimitCategory       = fields[129].Get<uint32>();
         itemTemplate.HolidayId               = fields[130].Get<uint32>();
         itemTemplate.ScriptId                = GetScriptId(fields[131].Get<std::string>());
         itemTemplate.DisenchantID            = fields[132].Get<uint32>();
@@ -4564,7 +4565,7 @@ void ObjectMgr::LoadPlayerInfo()
                     {
                         for (uint32 classIndex = CLASS_WARRIOR; classIndex < MAX_CLASSES; ++classIndex)
                         {
-                            if (classMask == 0 || ((1 << (classIndex - 1)) & classMask))
+                            if (classMask == 0 || ((uint32(1) << (classIndex - 1)) & classMask))
                             {
                                 if (!GetSkillRaceClassInfo(skill.SkillId, raceIndex, classIndex))
                                     continue;
@@ -4625,7 +4626,7 @@ void ObjectMgr::LoadPlayerInfo()
                     {
                         for (uint32 classIndex = CLASS_WARRIOR; classIndex < MAX_CLASSES; ++classIndex)
                         {
-                            if (classMask == 0 || ((1 << (classIndex - 1)) & classMask))
+                            if (classMask == 0 || ((uint32(1) << (classIndex - 1)) & classMask))
                             {
                                 if (PlayerInfo* info = _playerInfo[raceIndex][classIndex])
                                 {
@@ -4683,7 +4684,7 @@ void ObjectMgr::LoadPlayerInfo()
                     {
                         for (uint32 classIndex = CLASS_WARRIOR; classIndex < MAX_CLASSES; ++classIndex)
                         {
-                            if (classMask == 0 || ((1 << (classIndex - 1)) & classMask))
+                            if (classMask == 0 || ((uint32(1) << (classIndex - 1)) & classMask))
                             {
                                 if (PlayerInfo* info = _playerInfo[raceIndex][classIndex])
                                 {
@@ -5010,7 +5011,7 @@ void ObjectMgr::BuildPlayerLevelInfo(uint8 race, uint8 _class, uint8 level, Play
     // if conversion from uint32 to uint8 causes unexpected behaviour, change lvl to uint32
     for (uint8 lvl = sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL) - 1; lvl < level; ++lvl)
     {
-        switch (_class)
+        switch (GetLegacyClassForCustomClass(Classes(_class)))
         {
             case CLASS_WARRIOR:
                 info->stats[STAT_STRENGTH]  += (lvl > 23 ? 2 : (lvl > 1  ? 1 : 0));
@@ -9695,7 +9696,7 @@ int32 ObjectMgr::GetBaseReputationOf(FactionEntry const* factionEntry, uint8 rac
         return 0;
 
     uint32 raceMask = (1 << (race - 1));
-    uint32 classMask = (1 << (playerClass - 1));
+    uint32 classMask = (uint32(1) << (playerClass - 1));
 
     for (int i = 0; i < 4; i++)
     {

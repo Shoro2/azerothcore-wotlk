@@ -25,6 +25,8 @@ enum UnitHook
 {
     UNITHOOK_ON_HEAL,
     UNITHOOK_ON_DAMAGE,
+    UNITHOOK_ON_BLOCK,
+    UNITHOOK_ON_PERIODIC_DAMAGE_RESULT,
     UNITHOOK_MODIFY_PERIODIC_DAMAGE_AURAS_TICK,
     UNITHOOK_MODIFY_MELEE_DAMAGE,
     UNITHOOK_MODIFY_SPELL_DAMAGE_TAKEN,
@@ -44,6 +46,10 @@ enum UnitHook
     UNITHOOK_ON_UNIT_EXIT_COMBAT,
     UNITHOOK_ON_UNIT_DEATH,
     UNITHOOK_ON_UNIT_SET_SHAPESHIFT_FORM,
+    UNITHOOK_ON_SEND_AURA_UPDATE,
+    UNITHOOK_MODIFY_SPELL_EFFECT_BASE_VALUE,
+    UNITHOOK_CAN_UNIT_ATTACK,
+    UNITHOOK_SPELL_MAGNET_TARGET,
     UNITHOOK_END
 };
 
@@ -63,6 +69,13 @@ public:
     // Called when a unit deals damage to another unit
     virtual void OnDamage(Unit* /*attacker*/, Unit* /*victim*/, uint32& /*damage*/) { }
 
+    // Called after a unit blocks a melee or ranged attack
+    virtual void OnBlock(Unit* /*victim*/, Unit* /*attacker*/) { }
+
+    // Called after a harmful periodic tick resolves mitigation and damage.
+    // Unlike ModifyPeriodicDamageAurasTick, this never observes healing.
+    virtual void OnPeriodicDamageResult(Unit* /*target*/, Unit* /*attacker*/, uint32 /*damage*/, SpellInfo const* /*spellInfo*/) { }
+
     // Called when DoT's Tick Damage is being Dealt
     // Attacker can be nullptr if he is despawned while the aura still exists on target
     virtual void ModifyPeriodicDamageAurasTick(Unit* /*target*/, Unit* /*attacker*/, uint32& /*damage*/, SpellInfo const* /*spellInfo*/) { }
@@ -72,6 +85,11 @@ public:
 
     // Called when Spell Damage is being Dealt
     virtual void ModifySpellDamageTaken(Unit* /*target*/, Unit* /*attacker*/, int32& /*damage*/, SpellInfo const* /*spellInfo*/) { }
+
+    // Adjust the rolled, level-adjusted base before combo-point and effect modifiers.
+    // Implementations must scope their spells and preserve finite, representable values.
+    virtual void ModifySpellEffectBaseValue(Unit const* /*caster*/, SpellInfo const* /*spellInfo*/,
+        uint8 /*effectIndex*/, float& /*value*/) { }
 
     // Called when Heal is Recieved
     virtual void ModifyHealReceived(Unit* /*target*/, Unit* /*healer*/, uint32& /*heal*/, SpellInfo const* /*spellInfo*/) { }
@@ -85,7 +103,15 @@ public:
 
     virtual void OnAuraRemove(Unit* /*unit*/, AuraApplication* /*aurApp*/, AuraRemoveMode /*mode*/) { }
 
+    // World/map-thread notification before the stock aura packet. A null receiver
+    // means the target's visible set; a null application means a full snapshot.
+    virtual void OnSendAuraUpdate(Unit* /*target*/, Player* /*receiver*/,
+        AuraApplication const* /*application*/, bool /*remove*/) { }
+
     [[nodiscard]] virtual bool IfNormalReaction(Unit const* /*unit*/, Unit const* /*target*/, ReputationRank& /*repRank*/) { return true; }
+    [[nodiscard]] virtual bool CanUnitAttack(Unit const* /*attacker*/, Unit const* /*target*/,
+        SpellInfo const* /*spell*/) { return true; }
+    virtual Unit* SpellMagnetTarget(Unit* /*attacker*/, Unit* /*victim*/, SpellInfo const* /*spell*/) { return nullptr; }
 
     [[nodiscard]] virtual bool CanSetPhaseMask(Unit const* /*unit*/, uint32 /*newPhaseMask*/, bool /*update*/) { return true; }
 

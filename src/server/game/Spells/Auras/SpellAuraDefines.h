@@ -372,67 +372,87 @@ enum AuraType
     SPELL_AURA_309                                          = 309,
     SPELL_AURA_MOD_CREATURE_AOE_DAMAGE_AVOIDANCE            = 310,
     SPELL_AURA_311                                          = 311,
-    SPELL_AURA_312                                          = 312,
+    SPELL_AURA_ASCENSION_IGNORE_MIN_RANGE                   = 312,
     SPELL_AURA_313                                          = 313,
     SPELL_AURA_PREVENT_RESURRECTION                         = 314,
     SPELL_AURA_UNDERWATER_WALKING                           = 315,
     SPELL_AURA_PERIODIC_HASTE                               = 316,
-    // Project Ascension (CoA) extends the 3.3.5 aura range through 366.
-    // Named members use CoA's names. Members named SPELL_AURA_ASCENSION_<id>
-    // are PLACEHOLDERS: the spell-package spec records no CoA name for those
-    // ids. Every id loads, but all of them are handled by AuraEffect::HandleNULL
-    // until their mechanics are ported.
+    // Project Ascension extends the 3.3.5 aura range through 366. Unknown
+    // custom auras remain script-visible and have no immediate core effect
+    // until their individual mechanics are ported.
     SPELL_AURA_ASCENSION_MOD_ABSORB_AMOUNT_PCT              = 317,
-    SPELL_AURA_ASCENSION_318                                = 318, // placeholder name
     SPELL_AURA_ASCENSION_MOD_HEALING_RECEIVED_PCT           = 319,
-    SPELL_AURA_ASCENSION_320                                = 320, // placeholder name
-    SPELL_AURA_ASCENSION_321                                = 321, // placeholder name
-    SPELL_AURA_ASCENSION_322                                = 322, // placeholder name
-    SPELL_AURA_ASCENSION_323                                = 323, // placeholder name
-    SPELL_AURA_ASCENSION_324                                = 324, // placeholder name
-    SPELL_AURA_ASCENSION_325                                = 325, // placeholder name
-    SPELL_AURA_ASCENSION_326                                = 326, // placeholder name
     SPELL_AURA_ASCENSION_MOD_STAT_FROM_STAT                 = 327,
     SPELL_AURA_ASCENSION_MOD_MAX_MANA_FROM_STAT             = 328,
-    SPELL_AURA_ASCENSION_329                                = 329, // placeholder name
     SPELL_AURA_ASCENSION_MOD_CRIT_CHANCE_AGAINST_TARGET     = 330,
-    SPELL_AURA_ASCENSION_331                                = 331, // placeholder name
-    SPELL_AURA_ASCENSION_332                                = 332, // placeholder name
     SPELL_AURA_ASCENSION_MOD_HIT_CHANCE_ALL_PCT             = 333,
-    SPELL_AURA_ASCENSION_334                                = 334, // placeholder name
-    SPELL_AURA_ASCENSION_335                                = 335, // placeholder name
-    SPELL_AURA_ASCENSION_336                                = 336, // placeholder name
-    SPELL_AURA_ASCENSION_337                                = 337, // placeholder name
     SPELL_AURA_ASCENSION_MOD_IGNORE_ARMOR_PCT               = 338,
-    SPELL_AURA_ASCENSION_339                                = 339, // placeholder name
-    SPELL_AURA_ASCENSION_340                                = 340, // placeholder name
-    SPELL_AURA_ASCENSION_341                                = 341, // placeholder name
-    SPELL_AURA_ASCENSION_342                                = 342, // placeholder name
-    SPELL_AURA_ASCENSION_343                                = 343, // placeholder name
-    SPELL_AURA_ASCENSION_MOD_ATTACK_POWER_FLAT              = 344,
-    SPELL_AURA_ASCENSION_MOD_SPELL_POWER_FLAT               = 345,
-    SPELL_AURA_ASCENSION_346                                = 346, // placeholder name
-    SPELL_AURA_ASCENSION_347                                = 347, // placeholder name
-    SPELL_AURA_ASCENSION_348                                = 348, // placeholder name
-    SPELL_AURA_ASCENSION_349                                = 349, // placeholder name
-    SPELL_AURA_ASCENSION_MOD_CRIT_CHANCE                    = 350,
-    SPELL_AURA_ASCENSION_351                                = 351, // placeholder name
-    SPELL_AURA_ASCENSION_352                                = 352, // placeholder name
-    SPELL_AURA_ASCENSION_353                                = 353, // placeholder name
-    SPELL_AURA_ASCENSION_354                                = 354, // placeholder name
-    SPELL_AURA_ASCENSION_355                                = 355, // placeholder name
-    SPELL_AURA_ASCENSION_356                                = 356, // placeholder name
-    SPELL_AURA_ASCENSION_MOD_INSTANT_MANA_COST_PCT          = 357,
-    SPELL_AURA_ASCENSION_358                                = 358, // placeholder name
-    SPELL_AURA_ASCENSION_359                                = 359, // placeholder name
+    SPELL_AURA_ASCENSION_MOD_ATTACK_POWER_FLAT               = 344,
+    SPELL_AURA_ASCENSION_MOD_SPELL_POWER_FLAT                = 345,
+    SPELL_AURA_ASCENSION_MOD_CRIT_CHANCE                     = 350,
+    SPELL_AURA_ASCENSION_MOD_INSTANT_MANA_COST_PCT           = 357,
     SPELL_AURA_ASCENSION_MOD_HEALING_DONE_VERSUS_AURASTATE  = 360,
-    SPELL_AURA_ASCENSION_361                                = 361, // placeholder name
-    SPELL_AURA_ASCENSION_362                                = 362, // placeholder name
-    SPELL_AURA_ASCENSION_363                                = 363, // placeholder name
-    SPELL_AURA_ASCENSION_364                                = 364, // placeholder name
-    SPELL_AURA_ASCENSION_365                                = 365, // placeholder name
-    SPELL_AURA_ASCENSION_366                                = 366, // placeholder name
+    SPELL_AURA_ASCENSION_LAST                               = 366,
     TOTAL_AURAS                                             = 367
+};
+
+// Selectors of copied aura 312. Mode 1 is documented by sample spell 2180313;
+// mode 10 is used by Ravager's all-ranged-abilities contract (92116).
+enum AscensionIgnoreMinRangeType
+{
+    IGNORE_MIN_RANGE_CLASS_MASK = 0,
+    IGNORE_MIN_RANGE_SHOTS = 1,
+    IGNORE_MIN_RANGE_RANGED_ABILITIES = 10
+};
+
+// Reviewed override-script conversions retain their selector in MiscValueB
+// to request class-mask filtering from native aura 303.
+enum AscensionAuraStateDamageScope
+{
+    ASCENSION_CLASSMASK_AURASTATE_DAMAGE = 20007
+};
+
+// Local conversions of reviewed coefficient modifiers. Keep private client
+// spellmod indices out of the native player's fixed-size modifier arrays.
+enum AscensionAttackPowerCoefficientScript
+{
+    ASCENSION_DIRECT_AP_COEFFICIENT_PCT = 20042,
+    ASCENSION_PERIODIC_AP_COEFFICIENT_PCT = 20045
+};
+
+enum AscensionSpellPowerCoefficientScript
+{
+    ASCENSION_SPELL_POWER_COEFFICIENT_FLAT = 20041
+};
+
+// These selectors are assigned only by reviewed module metadata conversions.
+// Raw private 20000-series records are not implicitly enabled.
+enum AscensionConditionalCombatScript
+{
+    ASCENSION_STATE_MASKED_CRIT = 21000,
+    ASCENSION_STATE_GLOBAL_CRIT = 21001,
+    ASCENSION_CREATURE_MASKED_CRIT = 21002,
+    ASCENSION_CREATURE_GLOBAL_CRIT = 21003,
+    ASCENSION_STATE_MASKED_GUARANTEED_CRIT = 21004,
+    ASCENSION_CREATURE_MASKED_GUARANTEED_CRIT = 21005,
+    ASCENSION_STATE_GLOBAL_CRIT_DAMAGE = 21006,
+    ASCENSION_STATE_MASKED_CRIT_DAMAGE = 21007,
+    ASCENSION_STATE_GLOBAL_IGNORE_ARMOR = 21008,
+    ASCENSION_STATE_MASKED_IGNORE_ARMOR = 21009,
+    ASCENSION_STATE_MASKED_AND_AUTO_CRIT = 21010
+};
+
+enum AscensionConditionalCombatModifier
+{
+    ASCENSION_CONDITIONAL_CRIT_CHANCE,
+    ASCENSION_CONDITIONAL_GUARANTEED_CRIT,
+    ASCENSION_CONDITIONAL_CRIT_DAMAGE,
+    ASCENSION_CONDITIONAL_IGNORE_ARMOR
+};
+
+enum AscensionConditionalTargetState
+{
+    ASCENSION_TARGET_HEALTH_ABOVE_80_PERCENT = 28
 };
 
 enum AuraObjectType

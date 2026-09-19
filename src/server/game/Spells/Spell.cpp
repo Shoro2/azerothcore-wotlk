@@ -4970,12 +4970,6 @@ void Spell::SendSpellGo()
 
 void Spell::WriteAmmoToPacket(WorldPacket* data)
 {
-    // This client repurposes the stock WotLK fallback display rows 5996/5998.
-    // Its verified ArrowFlight/BulletFlight rows keep no-ammo ranged attacks
-    // visible without changing any spell-specific missile or visual record.
-    constexpr uint32 ASCENSION_ARROW_PROJECTILE_DISPLAY_ID = 3482;
-    constexpr uint32 ASCENSION_BULLET_PROJECTILE_DISPLAY_ID = 3483;
-
     uint32 ammoInventoryType = 0;
     uint32 ammoDisplayID = 0;
 
@@ -5004,8 +4998,9 @@ void Spell::WriteAmmoToPacket(WorldPacket* data)
                      pItem->GetTemplate()->SubClass == ITEM_SUBCLASS_WEAPON_GUN ||
                      pItem->GetTemplate()->SubClass == ITEM_SUBCLASS_WEAPON_CROSSBOW))) // Requires No Ammo
                 {
-                    ammoDisplayID = pItem->GetTemplate()->SubClass == ITEM_SUBCLASS_WEAPON_GUN ?
-                        ASCENSION_BULLET_PROJECTILE_DISPLAY_ID : ASCENSION_ARROW_PROJECTILE_DISPLAY_ID;
+                    ammoDisplayID = 5996;                   // normal arrow
+                    if (IsAscensionClass(m_caster->getClass()) && pItem->GetTemplate()->SubClass == ITEM_SUBCLASS_WEAPON_GUN)
+                        ammoDisplayID = 5998;               // classes >= 12 fire the stock bullet from a gun
                     ammoInventoryType = INVTYPE_AMMO;
                 }
             }
@@ -5031,11 +5026,11 @@ void Spell::WriteAmmoToPacket(WorldPacket* data)
                                 break;
                             case ITEM_SUBCLASS_WEAPON_BOW:
                             case ITEM_SUBCLASS_WEAPON_CROSSBOW:
-                                ammoDisplayID = ASCENSION_ARROW_PROJECTILE_DISPLAY_ID;
+                                ammoDisplayID = 5996;       // is this need fixing?
                                 ammoInventoryType = INVTYPE_AMMO;
                                 break;
                             case ITEM_SUBCLASS_WEAPON_GUN:
-                                ammoDisplayID = ASCENSION_BULLET_PROJECTILE_DISPLAY_ID;
+                                ammoDisplayID = 5998;       // is this need fixing?
                                 ammoInventoryType = INVTYPE_AMMO;
                                 break;
                             default:

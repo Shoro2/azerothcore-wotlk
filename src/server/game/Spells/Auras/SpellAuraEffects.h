@@ -63,13 +63,7 @@ public:
     AuraType GetAuraType() const;
     int32 GetAmount() const { return m_isAuraEnabled ? m_amount : 0; }
     int32 GetForcedAmount() const { return m_amount; }
-    void SetAmount(int32 amount)
-    {
-        if (m_amount != amount)
-            GetBase()->SetNeedClientUpdateForTargets();
-        m_amount = amount;
-        m_canBeRecalculated = false;
-    }
+    void SetAmount(int32 amount) { m_amount = amount; m_canBeRecalculated = false;}
 
     int32 GetPeriodicTimer() const { return m_periodicTimer; }
     void SetPeriodicTimer(int32 periodicTimer) { m_periodicTimer = periodicTimer; }
@@ -121,12 +115,7 @@ public:
 
     int32 GetOldAmount() const { return m_oldAmount; }
     void SetOldAmount(int32 amount) { m_oldAmount = amount; }
-    void SetEnabled(bool enabled)
-    {
-        if (m_isAuraEnabled != enabled)
-            GetBase()->SetNeedClientUpdateForTargets();
-        m_isAuraEnabled = enabled;
-    }
+    void SetEnabled(bool enabled) { m_isAuraEnabled = enabled; }
 
 private:
     Aura* const m_base;

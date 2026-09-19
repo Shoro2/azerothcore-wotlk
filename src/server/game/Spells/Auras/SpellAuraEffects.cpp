@@ -831,7 +831,6 @@ void AuraEffect::ChangeAmount(int32 newAmount, bool mark, bool onStackOrReapply)
 
     if (handleMask & AURA_EFFECT_HANDLE_CHANGE_AMOUNT)
     {
-        GetBase()->SetNeedClientUpdateForTargets();
         if (!mark)
             m_amount = newAmount;
         else

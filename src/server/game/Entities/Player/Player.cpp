@@ -3276,6 +3276,11 @@ bool Player::CheckSkillLearnedBySpell(uint32 spellId)
     if (!sWorld->getBoolConfig(CONFIG_VALIDATE_SKILL_LEARNED_BY_SPELLS))
         return true;
 
+    // CoA classes share spells across class skill lines and CoA removed this check;
+    // FL keeps it for the stock classes.
+    if (IsAscensionClass(getClass()))
+        return true;
+
     SkillLineAbilityMapBounds skill_bounds = sSpellMgr->GetSkillLineAbilityMapBounds(spellId);
     uint32 errorSkill = 0;
     for (SkillLineAbilityMap::const_iterator sla = skill_bounds.first; sla != skill_bounds.second; ++sla)

@@ -395,7 +395,12 @@ struct CreatureModelInfo
 };
 
 // Benchmarked: Faster than std::map (insert/find)
-typedef std::unordered_map<uint16, CreatureModelInfo> CreatureModelContainer;
+// Keyed by the full 32-bit display id. With a uint16 key every display above
+// 65535 aliased onto the stock display 65536 below it: GetCreatureModelInfo
+// returned an unrelated stock row (wrong bounding radius, combat reach, gender
+// and a random DisplayID_Other_Gender swap), or no row at all and the creature
+// refused to spawn. Stock data never goes that high; custom content does.
+typedef std::unordered_map<uint32, CreatureModelInfo> CreatureModelContainer;
 
 enum InhabitTypeValues
 {

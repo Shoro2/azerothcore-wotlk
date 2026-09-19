@@ -27,6 +27,7 @@
 #include "SpellAuraDefines.h"
 #include "SpellAuraEffects.h"
 #include "SpellMgr.h"
+#include <algorithm>
 
 uint32 GetTargetFlagMask(SpellTargetObjectTypes objType)
 {
@@ -360,6 +361,58 @@ bool SpellEffectInfo::IsEffect(SpellEffects effectName) const
     return Effect == effectName;
 }
 
+uint32 SpellEffectInfo::GetItemArmorSubclassMask() const
+{
+    if (_spellInfo && _spellInfo->SpellFamilyName == 35 &&
+        (_spellInfo->Id == 706955 || _spellInfo->Id == 707872))
+        return EffectIndex == EFFECT_0 && IsAura(SPELL_AURA_MOD_BASE_RESISTANCE_PCT) &&
+            MiscValue == SPELL_SCHOOL_MASK_NORMAL && MiscValueB == 8 ? 8 : 0;
+    if (_spellInfo && _spellInfo->SpellFamilyName == 33 &&
+        (_spellInfo->Id == 680652 || _spellInfo->Id == 681467 || _spellInfo->Id == 805265))
+    {
+        uint32 mask = _spellInfo->Id == 805265 ? 64 : 16;
+        return EffectIndex == EFFECT_0 && IsAura(SPELL_AURA_MOD_BASE_RESISTANCE_PCT) &&
+            MiscValue == SPELL_SCHOOL_MASK_NORMAL && uint32(MiscValueB) == mask ? mask : 0;
+    }
+    if (_spellInfo && _spellInfo->SpellFamilyName == 31 &&
+        (_spellInfo->Id == 560091 || _spellInfo->Id == 561336))
+        return EffectIndex == EFFECT_0 && IsAura(SPELL_AURA_MOD_BASE_RESISTANCE_PCT) &&
+            MiscValue == SPELL_SCHOOL_MASK_NORMAL && MiscValueB == 64 ? 64 : 0;
+    if (_spellInfo && _spellInfo->SpellFamilyName == 20 &&
+        (_spellInfo->Id == 520252 || _spellInfo->Id == 520253))
+        return EffectIndex == EFFECT_0 && IsAura(SPELL_AURA_MOD_BASE_RESISTANCE_PCT) &&
+            MiscValue == SPELL_SCHOOL_MASK_NORMAL && MiscValueB == 6 ? 6 : 0;
+
+    if (_spellInfo && _spellInfo->Id == 680525 && _spellInfo->SpellFamilyName == 21)
+        return EffectIndex == EFFECT_0 && IsAura(SPELL_AURA_MOD_BASE_RESISTANCE_PCT) &&
+            MiscValue == SPELL_SCHOOL_MASK_NORMAL && MiscValueB == 8 ? 8 : 0;
+
+    if (_spellInfo && _spellInfo->Id == 800132 && _spellInfo->SpellFamilyName == 18)
+        return EffectIndex == EFFECT_1 && IsAura(SPELL_AURA_MOD_BASE_RESISTANCE_PCT) &&
+            MiscValue == SPELL_SCHOOL_MASK_NORMAL && MiscValueB == 64 ? 64 : 0;
+
+    if (!_spellInfo || _spellInfo->SpellFamilyName != 24 || MiscValue != SPELL_SCHOOL_MASK_NORMAL)
+        return 0;
+
+    switch (_spellInfo->Id)
+    {
+        case 800317: // Tower Formation has already been scoped to a dummy aura.
+            return EffectIndex == EFFECT_1 && IsAura(SPELL_AURA_DUMMY) && MiscValueB == 64 ? 64 : 0;
+        case 705331: // Iron Barrier
+            return EffectIndex == EFFECT_1 && IsAura(SPELL_AURA_MOD_BASE_RESISTANCE_PCT) &&
+                MiscValueB == 64 ? 64 : 0;
+        case 705370: // Shield Wall
+        case 707814:
+            return EffectIndex == EFFECT_0 && IsAura(SPELL_AURA_MOD_BASE_RESISTANCE_PCT) &&
+                MiscValueB == 64 ? 64 : 0;
+        case 803128: // Heavy Expert
+            return EffectIndex == EFFECT_0 && IsAura(SPELL_AURA_MOD_BASE_RESISTANCE_PCT) &&
+                MiscValueB == 24 ? 24 : 0;
+        default:
+            return 0;
+    }
+}
+
 bool SpellEffectInfo::IsAura() const
 {
     return (IsUnitOwnedAuraEffect() || Effect == SPELL_EFFECT_PERSISTENT_AREA_AURA) && ApplyAuraName != 0;
@@ -382,7 +435,8 @@ bool SpellEffectInfo::IsAreaAuraEffect() const
             Effect == SPELL_EFFECT_APPLY_AREA_AURA_FRIEND   ||
             Effect == SPELL_EFFECT_APPLY_AREA_AURA_ENEMY    ||
             Effect == SPELL_EFFECT_APPLY_AREA_AURA_PET      ||
-            Effect == SPELL_EFFECT_APPLY_AREA_AURA_OWNER)
+            Effect == SPELL_EFFECT_APPLY_AREA_AURA_OWNER    ||
+            Effect == SPELL_EFFECT_ASCENSION_APPLY_AURA_TO_SUMMONS)
         return true;
     return false;
 }
@@ -450,6 +504,8 @@ int32 SpellEffectInfo::CalcValue(Unit const* caster, int32 const* bp, Unit const
     // random damage
     if (caster)
     {
+        sScriptMgr->ModifySpellEffectBaseValue(caster, _spellInfo, EffectIndex, value);
+
         // bonus amount from combo points
         if (uint8 comboPoints = caster->GetComboPoints())
         {
@@ -613,8 +669,30 @@ ImmunityInfo const* SpellEffectInfo::GetImmunityInfo() const
     return _spellInfo->GetImmunityInfo(EffectIndex);
 }
 
-std::array<SpellEffectInfo::StaticData, TOTAL_SPELL_EFFECTS> SpellEffectInfo::_data =
-{ {
+namespace
+{
+    // Aggregate initialization of a std::array<T, Size> accepts a shorter list
+    // and silently value-initializes the missing tail. Taking the rows as
+    // T const (&)[N] deduces N from the number of rows instead, so a table that
+    // is not exactly Size rows long is a compile error.
+    template<std::size_t Size, typename T, std::size_t N>
+    constexpr std::array<T, Size> MakeFullTable(T const (&rows)[N])
+    {
+        static_assert(N == Size, "the table must have exactly one row per id");
+
+        std::array<T, Size> table{};
+        for (std::size_t i = 0; i < N; ++i)
+            table[i] = rows[i];
+
+        return table;
+    }
+}
+
+// One row per effect id, read unchecked as _data[Effect] by
+// GetImplicitTargetType() and GetUsedTargetObjectType(), so it is built through
+// MakeFullTable: a missing row is a compile error, not a zeroed tail.
+std::array<SpellEffectInfo::StaticData, TOTAL_SPELL_EFFECTS> SpellEffectInfo::_data = MakeFullTable<TOTAL_SPELL_EFFECTS, SpellEffectInfo::StaticData>(
+{
     // implicit target type           used target object type
     {EFFECT_IMPLICIT_TARGET_NONE,     TARGET_OBJECT_TYPE_NONE}, // 0
     {EFFECT_IMPLICIT_TARGET_EXPLICIT, TARGET_OBJECT_TYPE_UNIT}, // 1 SPELL_EFFECT_INSTAKILL
@@ -781,7 +859,41 @@ std::array<SpellEffectInfo::StaticData, TOTAL_SPELL_EFFECTS> SpellEffectInfo::_d
     {EFFECT_IMPLICIT_TARGET_EXPLICIT, TARGET_OBJECT_TYPE_UNIT}, // 162 SPELL_EFFECT_TALENT_SPEC_SELECT
     {EFFECT_IMPLICIT_TARGET_EXPLICIT, TARGET_OBJECT_TYPE_UNIT}, // 163 SPELL_EFFECT_163
     {EFFECT_IMPLICIT_TARGET_EXPLICIT, TARGET_OBJECT_TYPE_UNIT}, // 164 SPELL_EFFECT_REMOVE_AURA
-} };
+    {EFFECT_IMPLICIT_TARGET_EXPLICIT, TARGET_OBJECT_TYPE_UNIT}, // 165 SPELL_EFFECT_ASCENSION_MODIFY_COOLDOWN
+    {EFFECT_IMPLICIT_TARGET_EXPLICIT, TARGET_OBJECT_TYPE_UNIT}, // 166 SPELL_EFFECT_ASCENSION_RESTORE_BASE_MANA_PCT
+    {EFFECT_IMPLICIT_TARGET_NONE,     TARGET_OBJECT_TYPE_NONE}, // 167 unknown Ascension effect
+    {EFFECT_IMPLICIT_TARGET_NONE,     TARGET_OBJECT_TYPE_NONE}, // 168 unknown Ascension effect
+    {EFFECT_IMPLICIT_TARGET_NONE,     TARGET_OBJECT_TYPE_NONE}, // 169 SPELL_EFFECT_ASCENSION_SPREAD_AURA
+    {EFFECT_IMPLICIT_TARGET_NONE,     TARGET_OBJECT_TYPE_NONE}, // 170 SPELL_EFFECT_ASCENSION_SPREAD_AURA_2
+    {EFFECT_IMPLICIT_TARGET_NONE,     TARGET_OBJECT_TYPE_NONE}, // 171 unknown Ascension effect
+    {EFFECT_IMPLICIT_TARGET_NONE,     TARGET_OBJECT_TYPE_NONE}, // 172 unknown Ascension effect
+    {EFFECT_IMPLICIT_TARGET_EXPLICIT, TARGET_OBJECT_TYPE_UNIT}, // 173 SPELL_EFFECT_ASCENSION_REFRESH_AURA
+    {EFFECT_IMPLICIT_TARGET_NONE,     TARGET_OBJECT_TYPE_NONE}, // 174 unknown Ascension effect
+    {EFFECT_IMPLICIT_TARGET_EXPLICIT, TARGET_OBJECT_TYPE_UNIT}, // 175 SPELL_EFFECT_ASCENSION_MODIFY_AURA_STACKS
+    {EFFECT_IMPLICIT_TARGET_EXPLICIT, TARGET_OBJECT_TYPE_UNIT}, // 176 SPELL_EFFECT_ASCENSION_MODIFY_AURA_STACKS_2
+    {EFFECT_IMPLICIT_TARGET_EXPLICIT, TARGET_OBJECT_TYPE_UNIT}, // 177 SPELL_EFFECT_ASCENSION_MODIFY_AURA_DURATION
+    {EFFECT_IMPLICIT_TARGET_NONE,     TARGET_OBJECT_TYPE_NONE}, // 178 unknown Ascension effect
+    {EFFECT_IMPLICIT_TARGET_NONE,     TARGET_OBJECT_TYPE_NONE}, // 179 unknown Ascension effect
+    {EFFECT_IMPLICIT_TARGET_NONE,     TARGET_OBJECT_TYPE_NONE}, // 180 unknown Ascension effect
+    {EFFECT_IMPLICIT_TARGET_EXPLICIT, TARGET_OBJECT_TYPE_UNIT}, // 181 SPELL_EFFECT_ASCENSION_RESTORE_BASE_HEALTH_PCT
+    {EFFECT_IMPLICIT_TARGET_NONE,     TARGET_OBJECT_TYPE_NONE}, // 182 unknown Ascension effect
+    {EFFECT_IMPLICIT_TARGET_EXPLICIT, TARGET_OBJECT_TYPE_UNIT}, // 183 SPELL_EFFECT_ASCENSION_TRIGGER_SPELL_DELAYED
+    {EFFECT_IMPLICIT_TARGET_NONE,     TARGET_OBJECT_TYPE_NONE}, // 184 SPELL_EFFECT_ASCENSION_TRIGGER_RANDOM_SPELL
+    {EFFECT_IMPLICIT_TARGET_NONE,     TARGET_OBJECT_TYPE_NONE}, // 185 unknown Ascension effect
+    {EFFECT_IMPLICIT_TARGET_NONE,     TARGET_OBJECT_TYPE_NONE}, // 186 unknown Ascension effect
+    {EFFECT_IMPLICIT_TARGET_EXPLICIT, TARGET_OBJECT_TYPE_UNIT}, // 187 SPELL_EFFECT_ASCENSION_RESTORE_SPELL_CHARGES
+    {EFFECT_IMPLICIT_TARGET_NONE,     TARGET_OBJECT_TYPE_NONE}, // 188 unknown Ascension effect
+    {EFFECT_IMPLICIT_TARGET_NONE,     TARGET_OBJECT_TYPE_NONE}, // 189 unknown Ascension effect
+    {EFFECT_IMPLICIT_TARGET_EXPLICIT, TARGET_OBJECT_TYPE_UNIT}, // 190 SPELL_EFFECT_ASCENSION_APPLY_AURA_TO_SUMMONS
+    {EFFECT_IMPLICIT_TARGET_NONE,     TARGET_OBJECT_TYPE_NONE}, // 191 unknown Ascension effect
+    {EFFECT_IMPLICIT_TARGET_NONE,     TARGET_OBJECT_TYPE_NONE}, // 192 unknown Ascension effect
+    {EFFECT_IMPLICIT_TARGET_NONE,     TARGET_OBJECT_TYPE_NONE}, // 193 unknown Ascension effect
+    {EFFECT_IMPLICIT_TARGET_NONE,     TARGET_OBJECT_TYPE_NONE}, // 194 unknown Ascension effect
+    {EFFECT_IMPLICIT_TARGET_EXPLICIT, TARGET_OBJECT_TYPE_UNIT}, // 195 SPELL_EFFECT_ASCENSION_RESET_COOLDOWN
+    {EFFECT_IMPLICIT_TARGET_NONE,     TARGET_OBJECT_TYPE_NONE}, // 196 unknown Ascension effect
+    {EFFECT_IMPLICIT_TARGET_NONE,     TARGET_OBJECT_TYPE_NONE}, // 197 unknown Ascension effect
+    {EFFECT_IMPLICIT_TARGET_NONE,     TARGET_OBJECT_TYPE_NONE}, // 198 unknown Ascension effect
+});
 
 SpellInfo::SpellInfo(SpellEntry const* spellEntry)
 {
@@ -1336,6 +1448,22 @@ bool SpellInfo::IsAffected(uint32 familyName, flag96 const& familyFlags) const
     return true;
 }
 
+uint8 SpellInfo::CalcMaxAuraStacks(Unit* caster) const
+{
+    // Zero denotes an aura which cannot stack. A modifier must not make an
+    // unrelated, nonstacking helper stackable just because it shares a mask.
+    if (!StackAmount)
+        return 0;
+
+    float maximum = float(StackAmount);
+    if (caster)
+        if (Player* modOwner = caster->GetSpellModOwner())
+            modOwner->ApplySpellMod(Id, SPELLMOD_MAX_AURA_STACKS, maximum);
+
+    // Aura's stored stack count and the client update field are both uint8.
+    return uint8(std::clamp(maximum, 1.0f, 255.0f));
+}
+
 bool SpellInfo::IsAffectedBySpellMods() const
 {
     return !(AttributesEx3 & SPELL_ATTR3_IGNORE_CASTER_MODIFIERS);
@@ -1343,8 +1471,15 @@ bool SpellInfo::IsAffectedBySpellMods() const
 
 bool SpellInfo::IsAffectedBySpellMod(SpellModifier const* mod) const
 {
+    // Stim's copied healing ignores caster modifiers, but Bandage Gun explicitly
+    // increases its chain targets. Keep the exemption limited to that modifier;
+    // its ordinary family/mask and script checks still run below.
+    bool const bandageGunTargets = Id == 653241 && SpellFamilyName == 34 &&
+        mod->spellId == 705780 && mod->op == SPELLMOD_JUMP_TARGETS && mod->type == SPELLMOD_FLAT &&
+        mod->mask == flag96(128, 0, 0);
+
     // xinef: dont check duration mod
-    if (mod->op != SPELLMOD_DURATION)
+    if (mod->op != SPELLMOD_DURATION && !bandageGunTargets)
         if (!IsAffectedBySpellMods())
             return false;
 
@@ -1353,7 +1488,62 @@ bool SpellInfo::IsAffectedBySpellMod(SpellModifier const* mod) const
     if (!affectSpell)
         return false;
 
+    if (mod->targetSpellId && mod->targetSpellId != Id)
+        return false;
+
+    if (SpellFamilyName == 31 && affectSpell->SpellFamilyName == 31)
+    {
+        // The copied Dark Veil mask collides with Hammer. Route these modifiers
+        // by their named roots while preserving normal effect and cost calculation.
+        uint32 root = sSpellMgr->GetFirstSpellInChain(Id);
+        switch (mod->spellId)
+        {
+            case 520682: case 520810: return Id == 520345;
+            case 680600: case 802047: return root == 805116 || root == 804152;
+            case 805115: return root == 500720 || root == 806222 || root == 805116;
+            case 681102: case 681389: case 806768: return Id == 300277;
+            default: break;
+        }
+    }
+
+    if (SpellFamilyName == 33 && affectSpell->SpellFamilyName == 33)
+    {
+        uint32 root = sSpellMgr->GetFirstSpellInChain(Id);
+        switch (mod->spellId)
+        {
+            case 301242: return root == 800357 || root == 500143 || root == 500141 || root == 800231;
+            case 800722: case 680642: case 301293: return root == 500143;
+            case 300354: return root == 500141;
+            case 807299: return root == 500146;
+            case 800601: return root == 800357;
+            case 680639: return Id == 680700;
+            default: break;
+        }
+    }
+
+    if (SpellFamilyName == 34 && affectSpell->SpellFamilyName == 34)
+    {
+        uint32 root = sSpellMgr->GetFirstSpellInChain(Id);
+        bool mech = root == 801387 || root == 805372 || Id == 801388 || Id == 801390;
+        switch (mod->spellId)
+        {
+            case 680200: case 681482: return mech || root == 801009;
+            case 705788: return mech;
+            case 506818: case 506825: return Id == 524835;
+            case 802963: return root == 801005 || Id == 500601;
+            default: break;
+        }
+        if (Id == 504594 && mod->op == SPELLMOD_DURATION)
+            return false; // Four ticks are fixed; Makeshift modifiers must not add or remove ticks.
+    }
+
     if (!sScriptMgr->OnIsAffectedBySpellModCheck(affectSpell, this, mod))
+        return true;
+
+    // Widow's Kiss replaces Venom Fang and inherits its ordinary modifiers.
+    // Keep the replacement's own mask and all preceding eligibility checks.
+    if (Id == 504705 && SpellFamilyName == 35 && affectSpell->SpellFamilyName == 35 &&
+        (mod->mask & flag96(0, 16384, 0)))
         return true;
 
     return IsAffected(affectSpell->SpellFamilyName, mod->mask);
@@ -2732,6 +2922,9 @@ float SpellInfo::GetMaxRange(bool positive, Unit* caster, Spell* spell) const
     if (caster)
         if (Player* modOwner = caster->GetSpellModOwner())
             modOwner->ApplySpellMod(Id, SPELLMOD_RANGE, range, spell);
+    if (caster && caster->IsPlayer() && caster->getClass() == CLASS_STARCALLER && caster->HasAura(801975) &&
+        SpellFamilyName == 32 && DmgClass == SPELL_DAMAGE_CLASS_RANGED)
+        range = 50.0f;
     return range;
 }
 
@@ -2751,11 +2944,14 @@ int32 SpellInfo::GetMaxDuration() const
 
 uint32 SpellInfo::CalcCastTime(Unit* caster, Spell* spell) const
 {
+    bool serpent = caster && caster->IsPlayer() && caster->getClass() == CLASS_PROPHET &&
+        SpellFamilyName == 35 && caster->HasAura(800841) && caster->HasAura(805104) &&
+        (SpellFamilyFlags & flag96(16, 1263620, 65536));
     // not all spells have cast time index and this is all is pasiive abilities
-    if (!CastTimeEntry)
+    if (!CastTimeEntry && !serpent)
         return 0;
 
-    int32 castTime = CastTimeEntry->CastTime;
+    int32 castTime = serpent ? 1000 : CastTimeEntry->CastTime;
     if (HasAttribute(SPELL_ATTR0_USES_RANGED_SLOT) && (!IsAutoRepeatRangedSpell()))
         castTime += 500;
 
@@ -2802,6 +2998,13 @@ uint32 SpellInfo::GetRecoveryTime() const
 
 int32 SpellInfo::CalcPowerCost(Unit const* caster, SpellSchoolMask schoolMask, Spell* spell) const
 {
+    if (PowerType == POWER_MANA && caster->IsPlayer() && caster->getClass() == CLASS_TINKER &&
+        SpellFamilyName == 34 && sSpellMgr->GetFirstSpellInChain(Id) == 801005 && caster->HasAura(707272))
+        return 0;
+    if (PowerType == POWER_MANA && caster->IsPlayer() && caster->ToPlayer()->getClass() == CLASS_PYROMANCER &&
+        caster->HasAura(573220))
+        return 0;
+
     // Spell drain all exist power on cast (Only paladin lay of Hands)
     if (AttributesEx & SPELL_ATTR1_USE_ALL_MANA)
     {
@@ -2827,7 +3030,7 @@ int32 SpellInfo::CalcPowerCost(Unit const* caster, SpellSchoolMask schoolMask, S
                 powerCost += int32(CalculatePct(caster->GetCreateHealth(), ManaCostPercentage));
                 break;
             case POWER_MANA:
-                powerCost += int32(CalculatePct(caster->GetCreateMana(), ManaCostPercentage));
+                powerCost += int32(CalculatePct(UsesMaxManaForCost ? caster->GetMaxPower(POWER_MANA) : caster->GetCreateMana(), ManaCostPercentage));
                 break;
             case POWER_RAGE:
             case POWER_FOCUS:
@@ -2881,8 +3084,39 @@ int32 SpellInfo::CalcPowerCost(Unit const* caster, SpellSchoolMask schoolMask, S
         }
     }
 
-    // PCT mod from user auras by school
-    powerCost = int32(powerCost * (1.0f + caster->GetFloatValue(static_cast<uint16>(UNIT_FIELD_POWER_COST_MULTIPLIER) + school)));
+    // PCT mod from user auras by school. Ascension aura 357 applies only to
+    // intrinsically instant, non-channeled mana spells; ranged animation delay
+    // and temporary cast-time spellmods do not change that classification.
+    float powerCostMultiplier = caster->GetFloatValue(static_cast<uint16>(UNIT_FIELD_POWER_COST_MULTIPLIER) + school);
+    if (PowerType == POWER_MANA && !IsChanneled() && (!CastTimeEntry || CastTimeEntry->CastTime == 0))
+        powerCostMultiplier -= float(caster->GetTotalAuraModifier(SPELL_AURA_ASCENSION_MOD_INSTANT_MANA_COST_PCT)) / 100.0f;
+
+    if (PowerType == POWER_MANA && caster->IsPlayer() && caster->getClass() == CLASS_CULTIST && SpellFamilyName == 31)
+    {
+        uint32 insanity = caster->GetAura(500706) ? caster->GetAura(500706)->GetStackAmount() : 0;
+        if (Id == 801153 && insanity > 60)
+            return 0;
+        if (!IsChanneled() && (!CastTimeEntry || CastTimeEntry->CastTime == 0))
+            if (AuraEffect const* talent = caster->GetAuraEffect(582307, EFFECT_0))
+                powerCostMultiplier -= insanity * talent->GetAmount() / 100.0f;
+    }
+
+    powerCost = int32(powerCost * (1.0f + powerCostMultiplier));
+    if (PowerType == POWER_MANA && caster->IsPlayer() && caster->getClass() == CLASS_SUN_CLERIC &&
+        SpellFamilyName == 33)
+    {
+        uint32 root = sSpellMgr->GetFirstSpellInChain(Id);
+        if (caster->HasAura(681436) && (root == 800764 || root == 500152 || root == 503651 || root == 806159))
+            return 0;
+        if (caster->HasAura(803719) && caster->HasAura(807440))
+            powerCost /= 2;
+    }
+    if (caster->IsPlayer() && caster->getClass() == CLASS_PROPHET && SpellFamilyName == 35)
+    {
+        if (sSpellMgr->GetFirstSpellInChain(Id) == sSpellMgr->GetFirstSpellInChain(800946) &&
+            (caster->HasAura(706032) || caster->HasAura(681321)))
+            return 0;
+    }
     if (powerCost < 0)
         powerCost = 0;
     return powerCost;

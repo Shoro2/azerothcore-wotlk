@@ -245,6 +245,8 @@ public:
     //    stat
     void HandleAuraModStat(AuraApplication const* aurApp, uint8 mode, bool apply) const;
     void HandleModPercentStat(AuraApplication const* aurApp, uint8 mode, bool apply) const;
+    void HandleAscensionModStatFromStat(AuraApplication const* aurApp, uint8 mode, bool apply) const;
+    void HandleAscensionModMaxManaFromStat(AuraApplication const* aurApp, uint8 mode, bool apply) const;
     void HandleModSpellDamagePercentFromStat(AuraApplication const* aurApp, uint8 mode, bool apply) const;
     void HandleModSpellHealingPercentFromStat(AuraApplication const* aurApp, uint8 mode, bool apply) const;
     void HandleModSpellDamagePercentFromAttackPower(AuraApplication const* aurApp, uint8 mode, bool apply) const;
@@ -270,6 +272,7 @@ public:
     void HandleAuraModRegenInterrupt(AuraApplication const* aurApp, uint8 mode, bool apply) const;
     void HandleAuraModWeaponCritPercent(AuraApplication const* aurApp, uint8 mode, bool apply) const;
     void HandleModHitChance(AuraApplication const* aurApp, uint8 mode, bool apply) const;
+    void HandleAscensionModHitChanceAll(AuraApplication const* aurApp, uint8 mode, bool apply) const;
     void HandleModSpellHitChance(AuraApplication const* aurApp, uint8 mode, bool apply) const;
     void HandleModSpellCritChance(AuraApplication const* aurApp, uint8 mode, bool apply) const;
     void HandleModSpellCritChanceShool(AuraApplication const* aurApp, uint8 mode, bool apply) const;
@@ -287,6 +290,7 @@ public:
     void HandleModRatingFromStat(AuraApplication const* aurApp, uint8 mode, bool apply) const;
     //   attack power
     void HandleAuraModAttackPower(AuraApplication const* aurApp, uint8 mode, bool apply) const;
+    void HandleAscensionModAttackPowerFlat(AuraApplication const* aurApp, uint8 mode, bool apply) const;
     void HandleAuraModRangedAttackPower(AuraApplication const* aurApp, uint8 mode, bool apply) const;
     void HandleAuraModAttackPowerPercent(AuraApplication const* aurApp, uint8 mode, bool apply) const;
     void HandleAuraModRangedAttackPowerPercent(AuraApplication const* aurApp, uint8 mode, bool apply) const;

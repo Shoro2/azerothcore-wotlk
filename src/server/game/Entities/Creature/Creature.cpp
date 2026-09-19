@@ -1036,7 +1036,8 @@ void Creature::Regenerate(Powers power)
 
 void Creature::RegenerateHealth()
 {
-    if (!isRegeneratingHealth())
+    if (!isRegeneratingHealth() ||
+        HasAuraTypeWithMiscvalue(SPELL_AURA_PREVENT_REGENERATE_POWER, POWER_HEALTH))
         return;
 
     uint32 curValue = GetHealth();

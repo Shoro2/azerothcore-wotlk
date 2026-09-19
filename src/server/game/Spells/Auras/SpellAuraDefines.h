@@ -372,12 +372,87 @@ enum AuraType
     SPELL_AURA_309                                          = 309,
     SPELL_AURA_MOD_CREATURE_AOE_DAMAGE_AVOIDANCE            = 310,
     SPELL_AURA_311                                          = 311,
-    SPELL_AURA_312                                          = 312,
+    SPELL_AURA_ASCENSION_IGNORE_MIN_RANGE                   = 312,
     SPELL_AURA_313                                          = 313,
     SPELL_AURA_PREVENT_RESURRECTION                         = 314,
     SPELL_AURA_UNDERWATER_WALKING                           = 315,
     SPELL_AURA_PERIODIC_HASTE                               = 316,
-    TOTAL_AURAS                                             = 317
+    // Project Ascension extends the 3.3.5 aura range through 366. Unknown
+    // custom auras remain script-visible and have no immediate core effect
+    // until their individual mechanics are ported.
+    SPELL_AURA_ASCENSION_MOD_ABSORB_AMOUNT_PCT              = 317,
+    SPELL_AURA_ASCENSION_MOD_HEALING_RECEIVED_PCT           = 319,
+    SPELL_AURA_ASCENSION_MOD_STAT_FROM_STAT                 = 327,
+    SPELL_AURA_ASCENSION_MOD_MAX_MANA_FROM_STAT             = 328,
+    SPELL_AURA_ASCENSION_MOD_CRIT_CHANCE_AGAINST_TARGET     = 330,
+    SPELL_AURA_ASCENSION_MOD_HIT_CHANCE_ALL_PCT             = 333,
+    SPELL_AURA_ASCENSION_MOD_IGNORE_ARMOR_PCT               = 338,
+    SPELL_AURA_ASCENSION_MOD_ATTACK_POWER_FLAT               = 344,
+    SPELL_AURA_ASCENSION_MOD_SPELL_POWER_FLAT                = 345,
+    SPELL_AURA_ASCENSION_MOD_CRIT_CHANCE                     = 350,
+    SPELL_AURA_ASCENSION_MOD_INSTANT_MANA_COST_PCT           = 357,
+    SPELL_AURA_ASCENSION_MOD_HEALING_DONE_VERSUS_AURASTATE  = 360,
+    SPELL_AURA_ASCENSION_LAST                               = 366,
+    TOTAL_AURAS                                             = 367
+};
+
+// Selectors of copied aura 312. Mode 1 is documented by sample spell 2180313;
+// mode 10 is used by Ravager's all-ranged-abilities contract (92116).
+enum AscensionIgnoreMinRangeType
+{
+    IGNORE_MIN_RANGE_CLASS_MASK = 0,
+    IGNORE_MIN_RANGE_SHOTS = 1,
+    IGNORE_MIN_RANGE_RANGED_ABILITIES = 10
+};
+
+// Reviewed override-script conversions retain their selector in MiscValueB
+// to request class-mask filtering from native aura 303.
+enum AscensionAuraStateDamageScope
+{
+    ASCENSION_CLASSMASK_AURASTATE_DAMAGE = 20007
+};
+
+// Local conversions of reviewed coefficient modifiers. Keep private client
+// spellmod indices out of the native player's fixed-size modifier arrays.
+enum AscensionAttackPowerCoefficientScript
+{
+    ASCENSION_DIRECT_AP_COEFFICIENT_PCT = 20042,
+    ASCENSION_PERIODIC_AP_COEFFICIENT_PCT = 20045
+};
+
+enum AscensionSpellPowerCoefficientScript
+{
+    ASCENSION_SPELL_POWER_COEFFICIENT_FLAT = 20041
+};
+
+// These selectors are assigned only by reviewed module metadata conversions.
+// Raw private 20000-series records are not implicitly enabled.
+enum AscensionConditionalCombatScript
+{
+    ASCENSION_STATE_MASKED_CRIT = 21000,
+    ASCENSION_STATE_GLOBAL_CRIT = 21001,
+    ASCENSION_CREATURE_MASKED_CRIT = 21002,
+    ASCENSION_CREATURE_GLOBAL_CRIT = 21003,
+    ASCENSION_STATE_MASKED_GUARANTEED_CRIT = 21004,
+    ASCENSION_CREATURE_MASKED_GUARANTEED_CRIT = 21005,
+    ASCENSION_STATE_GLOBAL_CRIT_DAMAGE = 21006,
+    ASCENSION_STATE_MASKED_CRIT_DAMAGE = 21007,
+    ASCENSION_STATE_GLOBAL_IGNORE_ARMOR = 21008,
+    ASCENSION_STATE_MASKED_IGNORE_ARMOR = 21009,
+    ASCENSION_STATE_MASKED_AND_AUTO_CRIT = 21010
+};
+
+enum AscensionConditionalCombatModifier
+{
+    ASCENSION_CONDITIONAL_CRIT_CHANCE,
+    ASCENSION_CONDITIONAL_GUARANTEED_CRIT,
+    ASCENSION_CONDITIONAL_CRIT_DAMAGE,
+    ASCENSION_CONDITIONAL_IGNORE_ARMOR
+};
+
+enum AscensionConditionalTargetState
+{
+    ASCENSION_TARGET_HEALTH_ABOVE_80_PERCENT = 28
 };
 
 enum AuraObjectType

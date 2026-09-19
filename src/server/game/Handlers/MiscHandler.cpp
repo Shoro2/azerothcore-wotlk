@@ -315,8 +315,9 @@ void WorldSession::HandleWhoOpcode(WorldPacket& recvData)
         }
 
         // check if class matches classmask
+        // the client mask has 32 bits: class ids >= 32 cannot be filtered and are never excluded
         uint8 class_ = target.GetClass();
-        if (!(classmask & (1 << class_)))
+        if (class_ < 32 && !(classmask & (uint32(1) << class_)))
         {
             continue;
         }
@@ -1476,12 +1477,9 @@ void WorldSession::HandleCancelMountAuraOpcode(WorldPacket& /*recv_data*/)
 {
     LOG_DEBUG("network", "WORLD: CMSG_CANCEL_MOUNT_AURA");
 
-    //If player is not mounted, so go out :)
-    if (!_player->IsMounted())                              // not blizz like; no any messages on blizz
-    {
-        ChatHandler(this).SendSysMessage(LANG_CHAR_NON_MOUNTED);
+    // A cast can already have dismounted the player before the client's cancel packet arrives.
+    if (!_player->IsMounted())
         return;
-    }
 
     if (_player->IsInFlight())                               // not blizz like; no any messages on blizz
     {

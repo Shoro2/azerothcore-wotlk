@@ -25,6 +25,7 @@
 #include "SharedDefines.h"
 #include "SpellInfo.h"
 #include "Unit.h"
+#include <map>
 
 class Unit;
 class Player;
@@ -304,6 +305,16 @@ public:
 
     void EffectNULL(SpellEffIndex effIndex);
     void EffectUnused(SpellEffIndex effIndex);
+    void EffectAscensionModifyCooldown(SpellEffIndex effIndex);
+    void EffectAscensionRestoreBaseManaPct(SpellEffIndex effIndex);
+    void EffectAscensionRefreshAura(SpellEffIndex effIndex);
+    void EffectAscensionModifyAuraStacks(SpellEffIndex effIndex);
+    void EffectAscensionModifyAuraStacksBySpell(SpellEffIndex effIndex);
+    void EffectAscensionModifyAuraDuration(SpellEffIndex effIndex);
+    void EffectAscensionRestoreBaseHealthPct(SpellEffIndex effIndex);
+    void EffectAscensionTriggerSpellDelayed(SpellEffIndex effIndex);
+    void EffectAscensionResetCooldown(SpellEffIndex effIndex);
+    void EffectAscensionRestoreSpellCharges(SpellEffIndex effIndex);
     void EffectDistract(SpellEffIndex effIndex);
     void EffectPull(SpellEffIndex effIndex);
     void EffectSchoolDMG(SpellEffIndex effIndex);
@@ -589,9 +600,19 @@ public:
 
     Unit* GetCaster() const { return m_caster; }
     Unit* GetOriginalCaster() const { return m_originalCaster; }
+    ObjectGuid GetOriginalCasterGUID() const { return m_originalCasterGUID; }
+    WeaponAttackType GetScriptMeleeAttackType() const { return m_scriptMeleeAttackType; }
+    void SetScriptDamageEchoPercent(int32 percent) { m_scriptDamageEchoPercent = percent; }
+    int32 GetScriptDamageEchoPercent() const { return m_scriptDamageEchoPercent; }
+    void SetScriptExtraPowerSpent(uint32 amount) { m_scriptExtraPowerSpent = amount; }
+    uint32 GetScriptExtraPowerSpent() const { return m_scriptExtraPowerSpent; }
+    void SetScriptWeaponDamageMultiplier(float multiplier);
     Unit* GetOriginalTarget() const;
     SpellInfo const* GetSpellInfo() const { return m_spellInfo; }
     int32 GetPowerCost() const { return m_powerCost; }
+    // Current target's resolved damage, capped by health immediately before
+    // damage is dealt. Result hooks can use this for leech without overkill.
+    uint32 GetScriptHealthLeechDamage() const { return m_scriptHealthLeechDamage; }
 
     bool UpdatePointers();                              // must be used at call Spell code after time delay (non triggered spell cast/update spell call/etc)
 
@@ -603,6 +624,29 @@ public:
     // xinef: moved to public
     void LoadScripts();
     std::list<TargetInfo>* GetUniqueTargetInfo() { return &m_UniqueTargetInfo; }
+    std::list<TargetInfo> const* GetUniqueTargetInfo() const { return &m_UniqueTargetInfo; }
+    void AddUnitTargetForScript(Unit* target, uint32 effectMask, bool checkIfValid = true,
+        bool implicit = true) { AddUnitTarget(target, effectMask, checkIfValid, implicit); }
+    bool TryMarkScriptEventHandled(uint8 eventIndex) const
+    {
+        if (eventIndex >= 32)
+            return false;
+
+        uint32 eventMask = 1u << eventIndex;
+        if (m_scriptEventMask & eventMask)
+            return false;
+
+        m_scriptEventMask |= eventMask;
+        return true;
+    }
+
+    // Script-owned snapshots live with the cast, including delayed targets. Keys are spell ids.
+    void SetScriptValue(uint32 key, uint64 value) { m_scriptValues[key] = value; }
+    uint64 GetScriptValue(uint32 key) const
+    {
+        auto itr = m_scriptValues.find(key);
+        return itr != m_scriptValues.end() ? itr->second : 0;
+    }
 
     [[nodiscard]] uint32 GetTriggeredByAuraTickNumber() const { return m_triggeredByAuraSpell.tickNumber; }
     [[nodiscard]] SpellInfo const* GetTriggeredByAuraSpellInfo() const { return m_triggeredByAuraSpell.spellInfo; }
@@ -635,12 +679,19 @@ public:
     //Spell data
     SpellSchoolMask m_spellSchoolMask;                  // Spell school (can be overwrite for some spells (wand shoot for example)
     WeaponAttackType m_attackType;                      // For weapon based attack
+    float m_scriptWeaponDamageMultiplier = 1.0f;
+    WeaponAttackType m_scriptMeleeAttackType = MAX_ATTACK;
+    int32 m_scriptDamageEchoPercent = 0;
+    uint32 m_scriptExtraPowerSpent = 0;
     int32 m_powerCost;                                  // Calculated spell cost     initialized only in Spell::prepare
     int32 m_casttime;                                   // Calculated spell cast time initialized only in Spell::prepare
     int32 m_channeledDuration;                          // Calculated channeled spell duration in order to calculate correct pushback.
     bool m_canReflect;                                  // can reflect this spell?
 
     uint8 m_spellFlags;                                 // for spells whose target was changed in cast i.e. due to reflect
+    mutable uint32 m_scriptEventMask;                   // per-cast bookkeeping, including read-only proc callbacks
+    std::map<uint32, uint64> m_scriptValues;
+    uint32 m_scriptHealthLeechDamage = 0;
 
     bool m_autoRepeat;
     uint8 m_runesState;
@@ -700,6 +751,7 @@ public:
     uint32 m_procVictim;                  // Victim   trigger flags
     uint32 m_procEx;
     void   prepareDataForTriggerSystem(AuraEffect const* triggeredByAura);
+    void SetScriptMeleeAttackType(int32 attackType);
 
     // *****************************************
     // Spell target subsystem

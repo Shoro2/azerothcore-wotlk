@@ -199,10 +199,10 @@ uint8 Player::FindEquipSlot(ItemTemplate const* proto, uint32 slot, bool swap) c
             break;
         case INVTYPE_2HWEAPON:
             slots[0] = EQUIPMENT_SLOT_MAINHAND;
-            if (CanDualWield() && CanTitanGrip() && proto->SubClass != ITEM_SUBCLASS_WEAPON_POLEARM && proto->SubClass != ITEM_SUBCLASS_WEAPON_STAFF && proto->SubClass != ITEM_SUBCLASS_WEAPON_FISHING_POLE)
+            if (CanDualWield() && CanTitanGrip(proto))
                 if (Item* mhWeapon = GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_MAINHAND))
                     if (ItemTemplate const* mhWeaponProto = mhWeapon->GetTemplate())
-                        if (mhWeaponProto->SubClass != ITEM_SUBCLASS_WEAPON_POLEARM && mhWeaponProto->SubClass != ITEM_SUBCLASS_WEAPON_STAFF && mhWeaponProto->SubClass != ITEM_SUBCLASS_WEAPON_FISHING_POLE)
+                        if (CanTitanGrip(mhWeaponProto))
                             slots[1] = EQUIPMENT_SLOT_OFFHAND;
             break;
         case INVTYPE_TABARD:
@@ -261,7 +261,9 @@ uint8 Player::FindEquipSlot(ItemTemplate const* proto, uint32 slot, bool swap) c
         for (uint8 i = 0; i < 4; ++i)
             if (slots[i] != NULL_SLOT && !GetItemByPos(INVENTORY_SLOT_BAG_0, slots[i]))
                 // in case 2hand equipped weapon (without titan grip) offhand slot empty but not free
-                if (slots[i] != EQUIPMENT_SLOT_OFFHAND || !IsTwoHandUsed())
+                if (slots[i] != EQUIPMENT_SLOT_OFFHAND || !IsTwoHandUsed() ||
+                    (GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_MAINHAND) &&
+                     CanUseTwoHandWithShield(GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_MAINHAND)->GetTemplate(), proto)))
                     return slots[i];
 
         // if not found free and can swap return first appropriate from used
@@ -2013,20 +2015,25 @@ InventoryResult Player::CanEquipItem(uint8 slot, uint16& dest, Item* pItem, bool
                 }
                 else if (type == INVTYPE_2HWEAPON)
                 {
-                    if (!CanDualWield() || !CanTitanGrip())
+                    if (!CanDualWield() || !CanTitanGrip(pProto))
                         return EQUIP_ERR_CANT_DUAL_WIELD;
                 }
 
                 // Do not allow offhand with main hand polearm, staff or fishing pole
                 if (Item* mhWeapon = GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_MAINHAND))
                     if (ItemTemplate const* mhWeaponProto = mhWeapon->GetTemplate())
-                        if (mhWeaponProto->SubClass == ITEM_SUBCLASS_WEAPON_POLEARM ||
+                        if (!CanTitanGrip(mhWeaponProto) && !CanUseTwoHandWithShield(mhWeaponProto, pProto) &&
+                            (mhWeaponProto->SubClass == ITEM_SUBCLASS_WEAPON_POLEARM ||
                             mhWeaponProto->SubClass == ITEM_SUBCLASS_WEAPON_STAFF ||
-                            mhWeaponProto->SubClass == ITEM_SUBCLASS_WEAPON_FISHING_POLE)
+                            mhWeaponProto->SubClass == ITEM_SUBCLASS_WEAPON_FISHING_POLE))
                             return EQUIP_ERR_CANT_EQUIP_WITH_TWOHANDED;
 
                 if (IsTwoHandUsed())
-                    return EQUIP_ERR_CANT_EQUIP_WITH_TWOHANDED;
+                {
+                    Item const* main = GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_MAINHAND);
+                    if (!main || !CanUseTwoHandWithShield(main->GetTemplate(), pProto))
+                        return EQUIP_ERR_CANT_EQUIP_WITH_TWOHANDED;
+                }
             }
 
             // equip two-hand weapon case (with possible unequip 2 items)
@@ -2034,18 +2041,18 @@ InventoryResult Player::CanEquipItem(uint8 slot, uint16& dest, Item* pItem, bool
             {
                 if (eslot == EQUIPMENT_SLOT_OFFHAND)
                 {
-                    if (!CanTitanGrip())
+                    if (!CanTitanGrip(pProto))
                         return EQUIP_ERR_ITEM_CANT_BE_EQUIPPED;
                 }
                 else if (eslot != EQUIPMENT_SLOT_MAINHAND)
                     return EQUIP_ERR_ITEM_CANT_BE_EQUIPPED;
 
-                if (!CanTitanGrip() || (pProto->SubClass == ITEM_SUBCLASS_WEAPON_POLEARM || pProto->SubClass == ITEM_SUBCLASS_WEAPON_STAFF || pProto->SubClass == ITEM_SUBCLASS_WEAPON_FISHING_POLE))
+                if (!CanTitanGrip(pProto))
                 {
                     // offhand item must can be stored in inventory for offhand item and it also must be unequipped
                     Item* offItem = GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_OFFHAND);
                     ItemPosCountVec off_dest;
-                    if (offItem && (!not_loading ||
+                    if (offItem && !CanUseTwoHandWithShield(pProto, offItem->GetTemplate()) && (!not_loading ||
                                     CanUnequipItem(uint16(INVENTORY_SLOT_BAG_0) << 8 | EQUIPMENT_SLOT_OFFHAND, false) != EQUIP_ERR_OK ||
                                     CanStoreItem(NULL_BAG, NULL_SLOT, off_dest, offItem, false) != EQUIP_ERR_OK))
                         return swap ? EQUIP_ERR_ITEMS_CANT_BE_SWAPPED : EQUIP_ERR_INVENTORY_FULL;
@@ -5776,8 +5783,17 @@ void Player::_LoadActions(PreparedQueryResult result)
             uint32 action = fields[1].Get<uint32>();
             uint8 type = fields[2].Get<uint8>();
 
+            uint32 const originalAction = action;
+            if (type == ACTION_BUTTON_SPELL)
+                sScriptMgr->OnPlayerNormalizeActionButtonSpell(this, action, true);
+
             if (ActionButton* ab = addActionButton(button, action, type))
-                ab->uState = ACTIONBUTTON_UNCHANGED;
+            {
+                uint32 persistenceAction = action;
+                if (type == ACTION_BUTTON_SPELL)
+                    sScriptMgr->OnPlayerNormalizeActionButtonSpell(this, persistenceAction, false);
+                ab->uState = persistenceAction == originalAction ? ACTIONBUTTON_UNCHANGED : ACTIONBUTTON_CHANGED;
+            }
             else
             {
 
@@ -7296,6 +7312,10 @@ void Player::_SaveActions(CharacterDatabaseTransaction trans)
 
     for (ActionButtonList::iterator itr = m_actionButtons.begin(); itr != m_actionButtons.end();)
     {
+        uint32 action = itr->second.GetAction();
+        if (itr->second.GetType() == ACTION_BUTTON_SPELL)
+            sScriptMgr->OnPlayerNormalizeActionButtonSpell(this, action, false);
+
         switch (itr->second.uState)
         {
             case ACTIONBUTTON_NEW:
@@ -7303,7 +7323,7 @@ void Player::_SaveActions(CharacterDatabaseTransaction trans)
                 stmt->SetData(0, GetGUID().GetRawValue());
                 stmt->SetData(1, m_activeSpec);
                 stmt->SetData(2, itr->first);
-                stmt->SetData(3, itr->second.GetAction());
+                stmt->SetData(3, action);
                 stmt->SetData(4, uint8(itr->second.GetType()));
                 trans->Append(stmt);
 
@@ -7312,7 +7332,7 @@ void Player::_SaveActions(CharacterDatabaseTransaction trans)
                 break;
             case ACTIONBUTTON_CHANGED:
                 stmt = CharacterDatabase.GetPreparedStatement(CHAR_UPD_CHAR_ACTION);
-                stmt->SetData(0, itr->second.GetAction());
+                stmt->SetData(0, action);
                 stmt->SetData(1, uint8(itr->second.GetType()));
                 stmt->SetData(2, GetGUID().GetRawValue());
                 stmt->SetData(3, itr->first);

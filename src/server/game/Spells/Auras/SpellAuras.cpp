@@ -236,6 +236,7 @@ void AuraApplication::ClientUpdate(bool remove)
                 if (plr->NeedSendSpectatorData() && ArenaSpectator::ShouldSendAura(aura, GetEffectMask(), GetTarget()->GetGUID(), remove))
                     ArenaSpectator::SendCommand_Aura(plr->FindMap(), plr->GetGUID(), "AUR", aura->GetCasterGUID(), aura->GetSpellInfo()->Id, aura->GetSpellInfo()->IsPositive(), aura->GetSpellInfo()->Dispel, aura->GetDuration(), aura->GetMaxDuration(), (aura->GetCharges() > 1 ? aura->GetCharges() : aura->GetStackAmount()), remove);
 
+    sScriptMgr->OnSendAuraUpdate(_target, nullptr, this, remove);
     _target->SendMessageToSet(&data, true);
 }
 
@@ -968,15 +969,16 @@ void Aura::SetStackAmount(uint8 stackAmount)
 bool Aura::ModStackAmount(int32 num, AuraRemoveMode removeMode, bool periodicReset /*= false*/)
 {
     int32 stackAmount = m_stackAmount + num;
+    int32 maxStackAmount = num > 0 ? m_spellInfo->CalcMaxAuraStacks(GetCaster()) : m_spellInfo->StackAmount;
 
     // limit the stack amount (only on stack increase, stack amount may be changed manually)
-    if ((num > 0) && (stackAmount > int32(m_spellInfo->StackAmount)))
+    if ((num > 0) && (stackAmount > maxStackAmount))
     {
         // not stackable aura - set stack amount to 1
         if (!m_spellInfo->StackAmount)
             stackAmount = 1;
         else
-            stackAmount = m_spellInfo->StackAmount;
+            stackAmount = maxStackAmount;
     }
     // we're out of stacks, remove
     else if (stackAmount <= 0)
@@ -1138,8 +1140,14 @@ int32 Aura::CalcDispelChance(Unit* auraTarget, bool offensive) const
 
     // Apply dispel mod from aura caster
     if (Unit* caster = GetCaster())
+    {
         if (Player* modOwner = caster->GetSpellModOwner())
             modOwner->ApplySpellMod(GetId(), SPELLMOD_RESIST_DISPEL_CHANCE, resistChance);
+        AuraApplication const* application = auraTarget ? GetApplicationOfTarget(auraTarget->GetGUID()) : nullptr;
+        if (offensive && application && application->IsPositive() && caster->IsPlayer() && caster->getClass() == CLASS_PYROMANCER)
+            if (AuraEffect const* protection = caster->GetAuraEffect(706650, EFFECT_0))
+                resistChance += std::max(0, protection->GetAmount());
+    }
 
     // Dispel resistance from target SPELL_AURA_MOD_DISPEL_RESIST
     // Only affects offensive dispels
@@ -1159,6 +1167,12 @@ void Aura::SetLoadedState(int32 maxduration, int32 duration, int32 charges, uint
     m_isUsingCharges = m_procCharges != 0;
     m_stackAmount = stackamount;
     Unit* caster = GetCaster();
+    // Venomancer's saved dummy slots contain periodic snapshots read while
+    // rebuilding effect zero. Load those amounts before its periodic callback.
+    if (GetSpellInfo()->SpellFamilyName == 35)
+        for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+            if (m_effects[i])
+                m_effects[i]->SetAmount(amount[i]);
     for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
         if (m_effects[i])
         {
@@ -2863,6 +2877,26 @@ void UnitAura::FillTargetMap(std::map<Unit*, uint8>& targets, Unit* caster)
                             if (Unit* owner = GetUnitOwner()->GetCharmerOrOwner())
                                 if (GetUnitOwner()->IsWithinDistInMap(owner, radius))
                                     targetList.push_back(owner);
+                            break;
+                        }
+                    case SPELL_EFFECT_ASCENSION_APPLY_AURA_TO_SUMMONS:
+                        {
+                            Unit* owner = GetUnitOwner();
+                            for (Unit* controlled : owner->m_Controlled)
+                            {
+                                if (!controlled || !controlled->IsSummon() || controlled->GetOwnerGUID() != owner->GetGUID())
+                                    continue;
+
+                                if (!owner->IsInMap(controlled))
+                                    continue;
+
+                                // Several pet-scaling rows intentionally have no radius. A nonzero
+                                // DBC radius remains authoritative for range-limited summon auras.
+                                if (radius > 0.0f && !owner->IsWithinDistInMap(controlled, radius))
+                                    continue;
+
+                                targetList.push_back(controlled);
+                            }
                             break;
                         }
                 }

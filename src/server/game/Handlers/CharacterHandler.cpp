@@ -344,7 +344,7 @@ void WorldSession::HandleCharCreateOpcode(WorldPacket& recvData)
     if (!HasPermission(rbac::RBAC_PERM_SKIP_CHECK_CHARACTER_CREATION_CLASSMASK))
     {
         uint32 classMaskDisabled = sWorld->getIntConfig(CONFIG_CHARACTER_CREATING_DISABLED_CLASSMASK);
-        if ((1 << (createInfo->Class - 1)) & classMaskDisabled)
+        if ((uint32(1) << (createInfo->Class - 1)) & classMaskDisabled)
         {
             SendCharCreate(CHAR_CREATE_DISABLED);
             return;
@@ -1224,7 +1224,7 @@ void WorldSession::HandlePlayerLoginToCharInWorld(Player* pCurrChar)
     for (uint16 Opcode = SMSG_SET_FLAT_SPELL_MODIFIER; Opcode <= SMSG_SET_PCT_SPELL_MODIFIER; ++Opcode) // PCT = FLAT+1
     {
         uint32 modType = (Opcode == SMSG_SET_FLAT_SPELL_MODIFIER) ? SPELLMOD_FLAT : SPELLMOD_PCT;
-        for (uint32 opType = SPELLMOD_DAMAGE; opType < MAX_SPELLMOD; ++opType)
+        for (uint32 opType = SPELLMOD_DAMAGE; opType < MAX_CLIENT_SPELLMOD; ++opType)
         {
             int32 i = 0;
             flag96 _mask = 0;
@@ -1240,13 +1240,13 @@ void WorldSession::HandlePlayerLoginToCharInWorld(Player* pCurrChar)
                 _mask[i] = uint32(1) << (eff - (32 * i));
                 int32 val = 0;
                 for (auto const& spellMod : spellMods)
-                    if (spellMod->type == modType && spellMod->mask & _mask)
+                    if (spellMod->type == modType && (spellMod->mask & _mask))
                         val += spellMod->value;
 
                 if (val == 0)
                     continue;
 
-                WorldPacket data(Opcode, (1 + 1 + 4));
+                WorldPacket data(Opcode, 6);
                 data << uint8(eff);
                 data << uint8(opType);
                 data << int32(val);

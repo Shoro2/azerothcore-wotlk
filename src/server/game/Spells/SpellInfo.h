@@ -303,6 +303,7 @@ public:
     bool IsEffect(SpellEffects effectName) const;
     bool IsAura() const;
     bool IsAura(AuraType aura) const;
+    uint32 GetItemArmorSubclassMask() const;
     bool IsTargetingArea() const;
     bool IsAreaAuraEffect() const;
     bool IsFarUnitTargetEffect() const;
@@ -354,6 +355,15 @@ public:
     uint32 AttributesEx6;
     uint32 AttributesEx7;
     uint32 AttributesCu;
+    // Override only the stat source of native damage AP coefficients.
+    bool UseRangedAttackPowerForDamage = false;
+    bool UsesMaxManaForCost = false;
+    bool AscensionIgnoreAbsorbAndResistance = false;
+    bool AscensionIgnoreAbsorb = false;
+    bool AscensionInheritsResolvedAmount = false;
+    // Runtime-only opt-in for explicitly authored coefficients. Rank base
+    // growth still uses the original SpellLevel and MaxLevel metadata.
+    bool IgnoreSpellLevelPenalty = false;
     uint32 Stances;
     uint32 StancesNot;
     uint32 Targets;
@@ -371,6 +381,12 @@ public:
     SpellCastTimesEntry const* CastTimeEntry;
     uint32 RecoveryTime;
     uint32 CategoryRecoveryTime;
+    // Optional local extension, populated only from verified class data.
+    uint32 ChargeRecoveryKey = 0;
+    uint32 ChargeCategoryId = 0;
+    uint32 ChargeRecoveryTime = 0;
+    uint8 MaxCharges = 0;
+    bool IsDeprecatedForPlayers = false;
     uint32 StartRecoveryCategory;
     uint32 StartRecoveryTime;
     uint32 InterruptFlags;
@@ -541,6 +557,7 @@ public:
     uint32 GetMaxTicks() const;
 
     uint32 CalcCastTime(Unit* caster = nullptr, Spell* spell = nullptr) const;
+    uint8 CalcMaxAuraStacks(Unit* caster = nullptr) const;
     uint32 GetRecoveryTime() const;
 
     int32 CalcPowerCost(Unit const* caster, SpellSchoolMask schoolMask, Spell* spell = nullptr) const;

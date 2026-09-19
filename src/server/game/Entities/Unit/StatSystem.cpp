@@ -17,6 +17,7 @@
 
 #include "Config.h"
 #include "Creature.h"
+#include "Item.h"
 #include "Pet.h"
 #include "Player.h"
 #include "ScriptMgr.h"
@@ -43,6 +44,41 @@ inline bool _ModifyUInt32(bool apply, uint32& baseValue, int32& amount)
         baseValue -= amount;
     }
     return apply;
+}
+
+namespace
+{
+float GetAscensionStatFromStatBonus(Player const& player, Stats destinationStat)
+{
+    float bonus = 0.0f;
+    Unit::AuraEffectList const& effects = player.GetAuraEffectsByType(SPELL_AURA_ASCENSION_MOD_STAT_FROM_STAT);
+    for (AuraEffect const* effect : effects)
+    {
+        int32 const sourceStat = effect->GetMiscValueB();
+        if (effect->GetMiscValue() != destinationStat || sourceStat < STAT_STRENGTH || sourceStat >= MAX_STATS || sourceStat == destinationStat)
+            continue;
+
+        bonus += CalculatePct(float(player.GetStat(Stats(sourceStat))), effect->GetAmount());
+    }
+
+    return bonus;
+}
+
+float GetAscensionMaxManaFromStatBonus(Player const& player)
+{
+    float bonus = 0.0f;
+    Unit::AuraEffectList const& effects = player.GetAuraEffectsByType(SPELL_AURA_ASCENSION_MOD_MAX_MANA_FROM_STAT);
+    for (AuraEffect const* effect : effects)
+    {
+        int32 const sourceStat = effect->GetMiscValueB();
+        if (effect->GetMiscValue() != POWER_MANA || sourceStat < STAT_STRENGTH || sourceStat >= MAX_STATS)
+            continue;
+
+        bonus += CalculatePct(float(player.GetStat(Stats(sourceStat))), effect->GetAmount());
+    }
+
+    return bonus;
+}
 }
 
 /*#######################################
@@ -100,7 +136,7 @@ bool Player::UpdateStats(Stats stat)
         return false;
 
     // value = ((base_value * base_pct) + total_value) * total_pct
-    float value  = GetTotalStatValue(stat);
+    float value = GetTotalStatValue(stat, GetAscensionStatFromStatBonus(*this, stat));
 
     SetStat(stat, int32(value));
 
@@ -161,6 +197,33 @@ bool Player::UpdateStats(Stats stat)
             if (mask & (1 << rating))
                 ApplyRatingMod(CombatRating(rating), 0, true);
     }
+
+    AuraEffectList const& statFromStat = GetAuraEffectsByType(SPELL_AURA_ASCENSION_MOD_STAT_FROM_STAT);
+    for (AuraEffect const* effect : statFromStat)
+    {
+        int32 const sourceStat = effect->GetMiscValueB();
+        if (sourceStat == stat && effect->GetMiscValue() >= STAT_STRENGTH && effect->GetMiscValue() < MAX_STATS && effect->GetMiscValue() != sourceStat)
+        {
+            // Refresh all destinations after a source stat changes. UpdateAllStats
+            // performs the conversion pass without recursively invoking UpdateStats.
+            UpdateAllStats();
+            break;
+        }
+    }
+
+    if (stat != STAT_INTELLECT)
+    {
+        AuraEffectList const& manaFromStat = GetAuraEffectsByType(SPELL_AURA_ASCENSION_MOD_MAX_MANA_FROM_STAT);
+        for (AuraEffect const* effect : manaFromStat)
+        {
+            if (effect->GetMiscValue() == POWER_MANA && effect->GetMiscValueB() == stat)
+            {
+                UpdateMaxPower(POWER_MANA);
+                break;
+            }
+        }
+    }
+
     return true;
 }
 
@@ -208,6 +271,19 @@ bool Player::UpdateAllStats()
     {
         float value = GetTotalStatValue(Stats(i));
         SetStat(Stats(i), int32(value));
+    }
+
+    // Source stats must be current before evaluating aura 327. Keeping the
+    // conversion in this second pass also makes simultaneous stat rebuilds
+    // independent of the destination/source enum ordering.
+    if (!GetAuraEffectsByType(SPELL_AURA_ASCENSION_MOD_STAT_FROM_STAT).empty())
+    {
+        for (uint8 i = STAT_STRENGTH; i < MAX_STATS; ++i)
+        {
+            Stats const stat = Stats(i);
+            float value = GetTotalStatValue(stat, GetAscensionStatFromStatBonus(*this, stat));
+            SetStat(stat, int32(value));
+        }
     }
 
     UpdateArmor();
@@ -271,6 +347,22 @@ void Player::UpdateArmor()
     UnitMods unitMod = UNIT_MOD_ARMOR;
 
     float value = GetFlatModifierValue(unitMod, BASE_VALUE);   // base armor (from items)
+    // Apply scoped armor multipliers only to native effective item contributions.
+    // Unrestricted BASE_PCT and TOTAL_PCT modifiers still apply afterwards.
+    for (uint32 subclass = 0; subclass < MAX_ITEM_SUBCLASS_ARMOR; ++subclass)
+    {
+        float multiplier = GetTotalAuraMultiplier(SPELL_AURA_MOD_BASE_RESISTANCE_PCT,
+            [subclass](AuraEffect const* effect)
+            {
+                return (effect->GetSpellInfo()->Effects[effect->GetEffIndex()].GetItemArmorSubclassMask() &
+                    (1u << subclass)) != 0;
+            });
+        if (getClass() == CLASS_GUARDIAN)
+            if (AuraEffect const* tower = GetAuraEffect(800317, EFFECT_1))
+                if (tower->GetSpellInfo()->Effects[tower->GetEffIndex()].GetItemArmorSubclassMask() & (1u << subclass))
+                    AddPct(multiplier, tower->GetAmount());
+        value += GetItemArmorBySubclass(subclass) * (multiplier - 1.0f);
+    }
     value *= GetPctModifierValue(unitMod, BASE_PCT);           // armor percent from items
     value += GetStat(STAT_AGILITY) * 2.0f;                             // armor bonus from stats
     value += GetFlatModifierValue(unitMod, TOTAL_VALUE);
@@ -327,7 +419,13 @@ void Player::UpdateMaxPower(Powers power)
 {
     UnitMods unitMod = UnitMods(static_cast<uint16>(UNIT_MOD_POWER_START) + power);
 
-    float bonusPower = (power == POWER_MANA && GetCreatePowers(power) > 0) ? GetManaBonusFromIntellect() : 0;
+    float bonusPower = 0.0f;
+    if (power == POWER_MANA)
+    {
+        if (GetCreatePowers(power) > 0)
+            bonusPower += GetManaBonusFromIntellect();
+        bonusPower += GetAscensionMaxManaFromStatBonus(*this);
+    }
 
     float value = GetFlatModifierValue(unitMod, BASE_VALUE) + GetCreatePowers(power);
     value *= GetPctModifierValue(unitMod, BASE_PCT);
@@ -392,11 +490,15 @@ void Player::UpdateAttackPowerAndDamage(bool ranged)
     }
     else
     {
-        if (IsClass(CLASS_PALADIN, CLASS_CONTEXT_STATS) || IsClass(CLASS_DEATH_KNIGHT, CLASS_CONTEXT_STATS) || IsClass(CLASS_WARRIOR, CLASS_CONTEXT_STATS))
+        // Barbarian uses Warrior melee AP independently of its Rogue compatibility for other systems.
+        if (getClass() == CLASS_BARBARIAN || IsClass(CLASS_PALADIN, CLASS_CONTEXT_STATS) ||
+            IsClass(CLASS_DEATH_KNIGHT, CLASS_CONTEXT_STATS) || IsClass(CLASS_WARRIOR, CLASS_CONTEXT_STATS))
         {
             val2 = level * 3.0f + GetStat(STAT_STRENGTH) * 2.0f - 20.0f;
         }
-        else if (IsClass(CLASS_HUNTER, CLASS_CONTEXT_STATS) || IsClass(CLASS_SHAMAN, CLASS_CONTEXT_STATS) || IsClass(CLASS_ROGUE, CLASS_CONTEXT_STATS))
+        // Bloodmage gains Rogue base AP; its form/stat auras are added below as normal modifiers.
+        else if (getClass() == CLASS_SON_OF_ARUGAL || IsClass(CLASS_HUNTER, CLASS_CONTEXT_STATS) ||
+            IsClass(CLASS_SHAMAN, CLASS_CONTEXT_STATS) || IsClass(CLASS_ROGUE, CLASS_CONTEXT_STATS))
         {
             val2 = level * 2.0f + GetStat(STAT_STRENGTH) + GetStat(STAT_AGILITY) - 20.0f;
         }
@@ -577,6 +679,8 @@ void Player::CalculateMinMaxDamage(WeaponAttackType attType, bool normalized, bo
     float attackSpeedMod = GetAPMultiplier(attType, normalized);
 
     float baseValue  = GetFlatModifierValue(unitMod, BASE_VALUE) + GetTotalAttackPowerValue(attType) / 14.0f * attackSpeedMod;
+    if (getClass() == CLASS_STARCALLER && HasAura(805828) && CanUseAttackType(attType))
+        baseValue += std::max(0, SpellBaseDamageBonusDone(SPELL_SCHOOL_MASK_ARCANE)) * .2f;
     float basePct    = GetPctModifierValue(unitMod, BASE_PCT);
     float totalValue = GetFlatModifierValue(unitMod, TOTAL_VALUE);
     float totalPct   = addTotalPct ? GetPctModifierValue(unitMod, TOTAL_PCT) : 1.0f;
@@ -605,7 +709,7 @@ void Player::CalculateMinMaxDamage(WeaponAttackType attType, bool normalized, bo
         weaponMinDamage = BASE_MINDAMAGE;
         weaponMaxDamage = BASE_MAXDAMAGE;
     }
-    else if (attType == RANGED_ATTACK) // add ammo DPS to ranged damage
+    else if (attType == RANGED_ATTACK && !IsAscensionClass(getClass())) // stock classes use ammo DPS
     {
         weaponMinDamage += GetAmmoDPS() * attackSpeedMod;
         weaponMaxDamage += GetAmmoDPS() * attackSpeedMod;
@@ -746,7 +850,7 @@ float Player::GetMissPercentageFromDefence() const
     diminishing += (int32(GetRatingBonusValue(CR_DEFENSE_SKILL))) * 0.04f;
 
     // apply diminishing formula to diminishing miss chance
-    uint32 pclass = getClass() - 1;
+    uint32 pclass = GetLegacyClassForCustomClass(Classes(getClass())) - 1;
     return nondiminishing + (diminishing * miss_cap[pclass] / (diminishing + miss_cap[pclass] * m_diminishing_k[pclass]));
 }
 
@@ -770,7 +874,11 @@ void Player::UpdateParryPercentage()
     // No parry
     float value = 0.0f;
     m_realParry = 0.0f;
-    uint32 pclass = getClass() - 1;
+    // Starcaller learns Parry, unlike its general Druid stat fallback.
+    // Use the Hunter parry curve for both its cap and diminishing coefficient.
+    Classes const parryClass = getClass() == CLASS_STARCALLER ? CLASS_HUNTER :
+        GetLegacyClassForCustomClass(Classes(getClass()));
+    uint32 const pclass = parryClass - 1;
     if (CanParry() && parry_cap[pclass] > 0.0f)
     {
         float nondiminishing  = 5.0f;
@@ -823,7 +931,7 @@ void Player::UpdateDodgePercentage()
     // Dodge from rating
     diminishing += GetRatingBonusValue(CR_DODGE);
     // apply diminishing formula to diminishing dodge chance
-    uint32 pclass = getClass() - 1;
+    uint32 pclass = GetLegacyClassForCustomClass(Classes(getClass())) - 1;
     m_realDodge = nondiminishing + (diminishing * dodge_cap[pclass] / (diminishing + dodge_cap[pclass] * m_diminishing_k[pclass]));
 
     m_realDodge = m_realDodge < 0.0f ? 0.0f : m_realDodge;
@@ -850,9 +958,7 @@ void Player::UpdateSpellCritChance(uint32 school)
     // Crit from Intellect
     crit += GetSpellCritFromIntellect();
     // Increase crit from SPELL_AURA_MOD_SPELL_CRIT_CHANCE
-    crit += GetTotalAuraModifier(SPELL_AURA_MOD_SPELL_CRIT_CHANCE);
-    // Increase crit from SPELL_AURA_MOD_CRIT_PCT
-    crit += GetTotalAuraModifier(SPELL_AURA_MOD_CRIT_PCT);
+    crit += GetTotalAuraModifier(SPELL_AURA_MOD_SPELL_CRIT_CHANCE, SPELL_AURA_MOD_CRIT_PCT);
     // Increase crit by school from SPELL_AURA_MOD_SPELL_CRIT_CHANCE_SCHOOL
     crit += GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_SPELL_CRIT_CHANCE_SCHOOL, 1 << school);
     // Increase crit from spell crit ratings
@@ -870,19 +976,19 @@ void Player::UpdateArmorPenetration(int32 amount)
 
 void Player::UpdateMeleeHitChances()
 {
-    m_modMeleeHitChance = (float)GetTotalAuraModifier(SPELL_AURA_MOD_HIT_CHANCE);
+    m_modMeleeHitChance = float(GetTotalAuraModifier(SPELL_AURA_MOD_HIT_CHANCE, SPELL_AURA_ASCENSION_MOD_HIT_CHANCE_ALL_PCT));
     m_modMeleeHitChance += GetRatingBonusValue(CR_HIT_MELEE);
 }
 
 void Player::UpdateRangedHitChances()
 {
-    m_modRangedHitChance = (float)GetTotalAuraModifier(SPELL_AURA_MOD_HIT_CHANCE);
+    m_modRangedHitChance = float(GetTotalAuraModifier(SPELL_AURA_MOD_HIT_CHANCE, SPELL_AURA_ASCENSION_MOD_HIT_CHANCE_ALL_PCT));
     m_modRangedHitChance += GetRatingBonusValue(CR_HIT_RANGED);
 }
 
 void Player::UpdateSpellHitChances()
 {
-    m_modSpellHitChance = (float)GetTotalAuraModifier(SPELL_AURA_MOD_SPELL_HIT_CHANCE);
+    m_modSpellHitChance = float(GetTotalAuraModifier(SPELL_AURA_MOD_SPELL_HIT_CHANCE, SPELL_AURA_ASCENSION_MOD_HIT_CHANCE_ALL_PCT));
     m_modSpellHitChance += GetRatingBonusValue(CR_HIT_SPELL);
 }
 
@@ -1229,6 +1335,9 @@ bool Guardian::UpdateAllStats()
 
 void Guardian::UpdateArmor()
 {
+    if (GetOwner() && ((HasAura(805015) && GetOwner()->getClass() == CLASS_NECROMANCER) ||
+        (HasAura(707698) && GetOwner()->getClass() == CLASS_TINKER)))
+        return Creature::UpdateArmor();
     float value = GetFlatModifierValue(UNIT_MOD_ARMOR, BASE_VALUE);
     value *= GetPctModifierValue(UNIT_MOD_ARMOR, BASE_PCT);
     value += std::max<float>(GetStat(STAT_AGILITY) - GetCreateStat(STAT_AGILITY), 0.0f) * 2.0f;
@@ -1239,6 +1348,9 @@ void Guardian::UpdateArmor()
 
 void Guardian::UpdateMaxHealth()
 {
+    if (GetOwner() && ((HasAura(805015) && GetOwner()->getClass() == CLASS_NECROMANCER) ||
+        (HasAura(707698) && GetOwner()->getClass() == CLASS_TINKER)))
+        return Creature::UpdateMaxHealth();
     UnitMods unitMod = UNIT_MOD_HEALTH;
     float stamina = std::max<float>(GetStat(STAT_STAMINA) - GetCreateStat(STAT_STAMINA), 0.0f);
 
@@ -1284,6 +1396,9 @@ void Guardian::UpdateMaxHealth()
 
 void Guardian::UpdateMaxPower(Powers power)
 {
+    if (GetOwner() && ((HasAura(805015) && GetOwner()->getClass() == CLASS_NECROMANCER) ||
+        (HasAura(707698) && GetOwner()->getClass() == CLASS_TINKER)))
+        return Creature::UpdateMaxPower(power);
     UnitMods unitMod = UnitMods(static_cast<uint16>(UNIT_MOD_POWER_START) + power);
 
     float addValue = (power == POWER_MANA) ? std::max<float>(GetStat(STAT_INTELLECT) - GetCreateStat(STAT_INTELLECT), 0.0f) : 0.0f;
@@ -1318,6 +1433,10 @@ void Guardian::UpdateMaxPower(Powers power)
 
 void Guardian::UpdateAttackPowerAndDamage(bool ranged)
 {
+    // Necromancy supplies weighted owner AP. Native guardian Strength must not overwrite that base on aura updates.
+    if (GetOwner() && ((HasAura(805015) && GetOwner()->getClass() == CLASS_NECROMANCER) ||
+        (HasAura(707698) && GetOwner()->getClass() == CLASS_TINKER)))
+        return Creature::UpdateAttackPowerAndDamage(ranged);
     if (ranged)
         return;
 
@@ -1351,6 +1470,9 @@ void Guardian::UpdateAttackPowerAndDamage(bool ranged)
 
 void Guardian::UpdateDamagePhysical(WeaponAttackType attType)
 {
+    if (GetOwner() && ((HasAura(805015) && GetOwner()->getClass() == CLASS_NECROMANCER) ||
+        (HasAura(707698) && GetOwner()->getClass() == CLASS_TINKER)))
+        return Creature::UpdateDamagePhysical(attType);
     if (attType > BASE_ATTACK)
         return;
 

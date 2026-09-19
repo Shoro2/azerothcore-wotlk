@@ -56,6 +56,12 @@ No DBC files or DBC tools live here (there is no `share/` directory): for the pa
 
 ## What this fork does **not** change (as of 2026-05)
 
+> **Not true on the CoA line** (`claude/coa-dummy-class-753fde25` -> `claude/coa-spell-enums-753fde25` ->
+> `claude/coa-core-port-753fde25`, 2026-09-14/19): it carries class ids 12-32 and Project Ascension's CoA core delta,
+> which includes per-class combat formulas and stat handling for those classes. The two bullets below describe
+> `master` only. Record: `share-public` `docs/World of Warcraft/coa-classes/03-core-port.md` and
+> `docs/superpowers/plans/2026-09-19-coa-core-port.md`.
+
 - **no** custom class/race system
 - **no** changes to combat formulas (crit tables, resilience, etc.)
 - **no** merge conflict override at the database layer
@@ -68,7 +74,7 @@ No DBC files or DBC tools live here (there is no `share/` directory): for the pa
 - **Three databases**: `acore_auth`, `acore_characters`, `acore_world`.
 - **Build default**: `cmake .. -DSCRIPTS=static -DMODULES=static && make -j`. Because of `-Werror`, warnings become errors — custom patches must be warning-clean.
 - **Code style**: AzerothCore standard (`auto const&`, `Type const*`, 4 spaces, max 80 chars). Pre-commit checks via `apps/codestyle/codestyle-cpp.py` + `codestyle-sql.py`.
-- **CI**: macOS, Ubuntu (clang-15, clang-18, gcc-14), Windows. `-Werror` active. Module build separate.
+- **CI**: upstream runs macOS, Ubuntu (clang-15, clang-18, gcc-14) and Windows with `-Werror`, but **this fork runs none of it**: every build workflow is gated to the `azerothcore/azerothcore-wotlk` repository (e.g. `.github/workflows/core-build-pch.yml:44`). Nothing checks a fork commit automatically - build it yourself, and for anything bound for the Ubuntu host with its toolchain (Clang 18, libstdc++, `-DWITH_WARNINGS=1`).
 - **Spell.dbc corruption**: occurred in the past via `copy_spells_dbc.py` — the tool has had 6 safeguards since then. If corruption is suspected, restore the server copy from the nightly host backup, not from a legacy copy: see [`functions.md`](./functions.md#custom-spelldbc).
 
 ## License

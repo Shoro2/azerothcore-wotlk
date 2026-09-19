@@ -91,9 +91,15 @@ class PathGenerator
         void SetUseRaycast(bool useRaycast) { _useRaycast = useRaycast; }
         // Adjust per-terrain Detour traversal cost on the active query
         // filter. Persists across CalculatePath calls until overwritten.
+        // The terrain value is the Detour area index (poly.area == NavTerrain); a value that is not
+        // an index below DT_MAX_AREAS (NAV_UNUSED3 / NAV_UNUSED4) has no cost slot and is ignored.
         void SetNavTerrainCost(NavTerrain terrain, float cost)
         {
-            _filter.setAreaCost(static_cast<uint8>(terrain), cost);
+            uint32 const area = static_cast<uint32>(terrain);
+            if (area >= static_cast<uint32>(DT_MAX_AREAS))
+                return;
+
+            _filter.setAreaCost(static_cast<int>(area), cost);
         }
         // Replace the active filter's exclude bitmask. Caller may pass
         // a single NavTerrain or an OR'd combination (NavTerrain values

@@ -30,10 +30,12 @@
 #include "DatabaseEnv.h"
 #include "Duration.h"
 #include "GossipDef.h"
+#include "QueryHolder.h"
 #include "Packet.h"
 #include "SharedDefines.h"
 #include "World.h"
 #include <atomic>
+#include <functional>
 #include <map>
 #include <memory>
 #include <utility>
@@ -42,7 +44,6 @@ class Creature;
 class GameObject;
 class InstanceSave;
 class Item;
-class LoginQueryHolder;
 class LoadPetFromDBQueryHolder;
 class Object;
 class Pet;
@@ -291,6 +292,20 @@ enum CharterTypes
     ARENA_TEAM_CHARTER_5v5_TYPE                   = 5
 };
 
+class LoginQueryHolder : public CharacterDatabaseQueryHolder
+{
+    private:
+        uint32 m_accountId;
+        ObjectGuid m_guid;
+
+    public:
+        LoginQueryHolder(uint32 accountId, ObjectGuid guid);
+
+        ObjectGuid GetGuid() const { return m_guid; }
+        uint32 GetAccountId() const { return m_accountId; }
+        bool Initialize();
+};
+
 constexpr Seconds PLAY_TIME_LIMIT_APPROACHING_PARTIAL = Hours(2) + Minutes(30);
 constexpr Seconds PLAY_TIME_LIMIT_PARTIAL             = Hours(3);
 constexpr Seconds PLAY_TIME_LIMIT_APPROACHING_FULL    = Hours(4) + Minutes(30);
@@ -348,6 +363,11 @@ class CharacterCreateInfo
 {
     friend class WorldSession;
     friend class Player;
+
+public:
+    CharacterCreateInfo(std::string const name = "", uint8 _race = 0, uint8 _class = 0, uint8 gender = 0, uint8 skin = 0, uint8 face = 0,
+        uint8 hairStyle = 0, uint8 hairColor = 0, uint8 facialHair = 0)
+        : Name(name), Race(_race), Class(_class), Gender(gender), Skin(skin), Face(face), HairStyle(hairStyle), HairColor(hairColor), FacialHair(facialHair) { }
 
 protected:
     /// User specified variables
@@ -409,7 +429,7 @@ struct PacketCounter
 class WorldSession
 {
 public:
-    WorldSession(uint32 id, std::string&& name, uint32 accountFlags, std::shared_ptr<WorldSocket> sock, AccountTypes sec, uint8 expansion, time_t mute_time, LocaleConstant locale, uint32 recruiter, bool isARecruiter, bool skipQueue, uint32 TotalTime);
+    WorldSession(uint32 id, std::string&& name, uint32 accountFlags, std::shared_ptr<WorldSocket> sock, AccountTypes sec, uint8 expansion, time_t mute_time, LocaleConstant locale, uint32 recruiter, bool isARecruiter, bool skipQueue, uint32 TotalTime, bool is_bot = false);
     ~WorldSession();
 
     uint32 GetAccountFlags() const { return _accountFlags; }
@@ -441,6 +461,11 @@ public:
     bool ProcessMovementInfo(MovementInfo& movementInfo, Unit* mover, Player* plrMover, WorldPacket& recvData);
 
     void SendPacket(WorldPacket const* packet);
+    // Socketless integration tests can observe native responses without opening a client connection.
+    void SetSocketlessPacketObserver(std::function<void(WorldPacket const&)> observer)
+    {
+        _socketlessPacketObserver = std::move(observer);
+    }
     void SendPetNameInvalid(uint32 error, std::string const& name, DeclinedName* declinedName);
     void SendPartyResult(PartyOperation operation, std::string const& member, PartyResult res, uint32 val = 0);
 
@@ -1196,6 +1221,8 @@ public:                                                 // opcodes handlers
     void SetKicked(bool val) { _kicked = val; }
     bool IsSocketClosed() const;
 
+    void SetAddress(std::string const& address) { m_Address = address; }
+
     /*
      * CALLBACKS
      */
@@ -1208,6 +1235,13 @@ public:                                                 // opcodes handlers
     void InitializeSessionCallback(CharacterDatabaseQueryHolder const& realmHolder, uint32 clientCacheVersion);
 
     void SetPacketLogging(bool state);
+
+    LockedQueue<WorldPacket*>& GetPacketQueue();
+
+    [[nodiscard]] bool IsBot() const
+    {
+        return _isBot;
+    }
 
 private:
     void ProcessQueryCallbacks();
@@ -1270,6 +1304,7 @@ private:
     ObjectGuid::LowType m_GUIDLow;                     // set logined or recently logout player (while m_playerRecentlyLogout set)
     Player* _player;
     std::shared_ptr<WorldSocket> m_Socket;
+    std::function<void(WorldPacket const&)> _socketlessPacketObserver;
     std::string m_Address;
 
     AccountTypes _security;
@@ -1325,6 +1360,8 @@ private:
     uint32 _timeSyncTimer;
 
     uint32 _orderCounter;
+
+    bool _isBot;
 
     WorldSession(WorldSession const& right) = delete;
     WorldSession& operator=(WorldSession const& right) = delete;

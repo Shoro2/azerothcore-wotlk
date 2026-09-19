@@ -22,6 +22,7 @@
 #include "DBCStore.h"
 #include "DBCStructure.h"
 #include <list>
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -34,6 +35,12 @@ uint32 GetTalentSpellCost(uint32 spellId);
 TalentSpellPos const* GetTalentSpellPos(uint32 spellId);
 
 WMOAreaTableEntry const* GetWMOAreaTableEntryByTripple(int32 rootid, int32 adtid, int32 groupid);
+
+// -1 if not found
+int32 GetAreaFlagByAreaID(uint32 area_id);
+uint32 GetAreaFlagByMapId(uint32 mapid);
+AreaTableEntry const* GetAreaEntryByAreaID(uint32 area_id);
+AreaTableEntry const* GetAreaEntryByAreaFlagAndMap(uint32 area_flag, uint32 map_id);
 
 uint32 GetVirtualMapForMapAndZone(uint32 mapid, uint32 zoneId);
 
@@ -195,5 +202,7 @@ extern DBCStorage <WMOAreaTableEntry>            sWMOAreaTableStore;
 extern DBCStorage <WorldMapOverlayEntry>         sWorldMapOverlayStore;
 
 void LoadDBCStores(std::string const& dataPath);
+/// Path of a client DBC in the directory LoadDBCStores read, for tables read with ClientDBC.
+std::string GetClientDBCPath(std::string_view fileName);
 
 #endif

@@ -917,6 +917,31 @@ bool Player::IsTotemCategoryCompatiableWith(ItemTemplate const* pProto, uint32 r
     return true;
 }
 
+InventoryResult Player::BotCanUseItem(ItemTemplate const* proto) const
+{
+    if (proto->Class == ITEM_CLASS_ARMOR && proto->SubClass == ITEM_SUBCLASS_ARMOR_IDOL && !IsClass(CLASS_DRUID, CLASS_CONTEXT_EQUIP_RELIC))
+    {
+        return EQUIP_ERR_YOU_CAN_NEVER_USE_THAT_ITEM;
+    }
+
+    if (proto->Class == ITEM_CLASS_ARMOR && proto->SubClass == ITEM_SUBCLASS_ARMOR_TOTEM && !IsClass(CLASS_SHAMAN, CLASS_CONTEXT_EQUIP_RELIC))
+    {
+        return EQUIP_ERR_YOU_CAN_NEVER_USE_THAT_ITEM;
+    }
+
+    if (proto->Class == ITEM_CLASS_ARMOR && proto->SubClass == ITEM_SUBCLASS_ARMOR_LIBRAM && !IsClass(CLASS_PALADIN, CLASS_CONTEXT_EQUIP_RELIC))
+    {
+        return EQUIP_ERR_YOU_CAN_NEVER_USE_THAT_ITEM;
+    }
+
+    if (proto->Class == ITEM_CLASS_ARMOR && proto->SubClass == ITEM_SUBCLASS_ARMOR_SIGIL && !IsClass(CLASS_DEATH_KNIGHT, CLASS_CONTEXT_EQUIP_RELIC))
+    {
+        return EQUIP_ERR_YOU_CAN_NEVER_USE_THAT_ITEM;
+    }
+
+    return CanUseItem(proto);
+}
+
 InventoryResult Player::CanStoreItem_InSpecificSlot(uint8 bag, uint8 slot, ItemPosCountVec& dest, ItemTemplate const* pProto, uint32& count, bool swap, Item* pSrcItem) const
 {
     Item* pItem2 = GetItemByPos(bag, slot);
@@ -7370,7 +7395,10 @@ void Player::_SaveAuras(CharacterDatabaseTransaction trans, bool logout)
             continue;
 
         Aura* aura = itr->second;
-        if (!logout && aura->GetDuration() < 60 * IN_MILLISECONDS )
+        // Skipping an aura that is about to expire only saves a write, because the delete above already
+        // dropped every stored row. A permanent aura reports duration -1, so it must not be caught by that
+        // test: doing so loses it for good if the realm never reaches a clean logout for this character.
+        if (!logout && !aura->IsPermanent() && aura->GetDuration() < 60 * IN_MILLISECONDS)
             continue;
 
         int32 damage[MAX_SPELL_EFFECTS];

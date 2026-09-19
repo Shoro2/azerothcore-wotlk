@@ -26,6 +26,7 @@
 #include "SpellMgr.h"
 #include "TransportMgr.h"
 #include "World.h"
+#include <algorithm>
 #include <map>
 
 typedef std::map<uint16, uint32> AreaFlagByAreaID;
@@ -39,6 +40,9 @@ DBCStorage <AreaGroupEntry> sAreaGroupStore(AreaGroupEntryfmt);
 DBCStorage <AreaPOIEntry> sAreaPOIStore(AreaPOIEntryfmt);
 
 static WMOAreaInfoByTripple sWMOAreaInfoByTripple;
+static AreaFlagByAreaID sAreaFlagByAreaID;
+// for instances without generated *.map files
+static AreaFlagByMapID  sAreaFlagByMapID;
 
 DBCStorage <AchievementEntry> sAchievementStore(Achievementfmt);
 DBCStorage <AchievementCategoryEntry> sAchievementCategoryStore(AchievementCategoryfmt);
@@ -200,6 +204,7 @@ DBCStorage <WorldMapOverlayEntry> sWorldMapOverlayStore(WorldMapOverlayEntryfmt)
 typedef std::list<std::string> StoreProblemList;
 
 uint32 DBCFileCount = 0;
+static std::string sDBCPath;
 
 static bool LoadDBC_assert_print(uint32 fsize, uint32 rsize, std::string const& filename)
 {
@@ -234,6 +239,10 @@ inline void LoadDBC(uint32& availableDbcLocales, StoreProblemList& errors, DBCSt
             if (!storage.LoadStringsFrom(localizedName.c_str()))
                 availableDbcLocales &= ~(1 << i);             // mark as not available for speedup next checks
         }
+
+        if (uint32 invalidStrings = storage.GetInvalidStringCount())
+            LOG_WARN("dbc", "{}: {} strings point outside the string block; loaded as empty.",
+                dbcFilename, invalidStrings);
     }
 
     if (dbTable)
@@ -263,6 +272,7 @@ void LoadDBCStores(std::string const& dataPath)
     uint32 oldMSTime = getMSTime();
 
     std::string dbcPath = dataPath + "dbc/";
+    sDBCPath = dbcPath;
 
     StoreProblemList bad_dbc_files;
     uint32 availableDbcLocales = 0xFFFFFFFF;
@@ -383,6 +393,19 @@ void LoadDBCStores(std::string const& dataPath)
     LOAD_DBC(sWorldMapOverlayStore,                 "WorldMapOverlay.dbc",                  "worldmapoverlay_dbc");
 
 #undef LOAD_DBC
+
+    for (uint32 i = 0; i < sAreaTableStore.GetNumRows(); ++i)    // areaflag numbered from 0
+    {
+        if (AreaTableEntry const* area = sAreaTableStore.LookupEntry(i))
+        {
+            // fill AreaId->DBC records
+            sAreaFlagByAreaID.insert(AreaFlagByAreaID::value_type(uint16(area->ID), area->exploreFlag));
+
+            // fill MapId->DBC records ( skip sub zones and continents )
+            if (area->zone == 0 && area->mapid != 0 && area->mapid != 1 && area->mapid != 530)
+                sAreaFlagByMapID.insert(AreaFlagByMapID::value_type(area->mapid, area->exploreFlag));
+        }
+    }
 
     for (CharStartOutfitEntry const* outfit : sCharStartOutfitStore)
         sCharStartOutfitMap[outfit->Race | (outfit->Class << 8) | (outfit->Gender << 16)] = outfit;
@@ -548,6 +571,10 @@ void LoadDBCStores(std::string const& dataPath)
     for (TaxiPathNodeEntry const* entry : sTaxiPathNodeStore)
         sTaxiPathNodesByPath[entry->path][entry->index] = entry;
 
+    // Paths are walked by position; drop unused node numbers (CoA's path 1984 starts at node 1).
+    for (TaxiPathNodeList& nodes : sTaxiPathNodesByPath)
+        nodes.erase(std::remove(nodes.begin(), nodes.end(), nullptr), nodes.end());
+
     // Initialize global taxinodes mask
     // include existed nodes that have at least single not spell base (scripted) path
     {
@@ -651,6 +678,11 @@ void LoadDBCStores(std::string const& dataPath)
 
     LOG_INFO("server.loading", ">> Initialized {} Data Stores in {} ms", DBCFileCount, GetMSTimeDiffToNow(oldMSTime));
     LOG_INFO("server.loading", " ");
+}
+
+std::string GetClientDBCPath(std::string_view fileName)
+{
+    return sDBCPath + std::string(fileName);
 }
 
 SimpleFactionsList const* GetFactionTeamList(uint32 faction)
@@ -922,4 +954,41 @@ std::vector<SkillLineAbilityEntry const*> const& GetSkillLineAbilitiesBySkillLin
         return emptyVector;
     }
     return it->second;
+}
+
+uint32 GetAreaFlagByMapId(uint32 mapid)
+{
+    AreaFlagByMapID::iterator i = sAreaFlagByMapID.find(mapid);
+    if (i == sAreaFlagByMapID.end())
+        return 0;
+    return i->second;
+}
+
+int32 GetAreaFlagByAreaID(uint32 area_id)
+{
+    AreaFlagByAreaID::iterator i = sAreaFlagByAreaID.find(area_id);
+    if (i == sAreaFlagByAreaID.end())
+        return -1;
+
+    return i->second;
+}
+
+AreaTableEntry const* GetAreaEntryByAreaID(uint32 area_id)
+{
+    int32 areaflag = GetAreaFlagByAreaID(area_id);
+    if (areaflag < 0)
+        return nullptr;
+
+    return sAreaTableStore.LookupEntry(areaflag);
+}
+
+AreaTableEntry const* GetAreaEntryByAreaFlagAndMap(uint32 area_flag, uint32 map_id)
+{
+    if (area_flag)
+        return sAreaTableStore.LookupEntry(area_flag);
+
+    if (MapEntry const* mapEntry = sMapStore.LookupEntry(map_id))
+        return GetAreaEntryByAreaID(mapEntry->linked_zone);
+
+    return nullptr;
 }

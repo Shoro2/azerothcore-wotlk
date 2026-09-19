@@ -36,6 +36,7 @@ public:
             { "god",       HandleGodModeCheatCommand,   rbac::RBAC_PERM_COMMAND_CHEAT_GOD,       Console::No },
             { "casttime",  HandleCasttimeCheatCommand,  rbac::RBAC_PERM_COMMAND_CHEAT_CASTTIME,  Console::No },
             { "cooldown",  HandleCoolDownCheatCommand,  rbac::RBAC_PERM_COMMAND_CHEAT_COOLDOWN,  Console::No },
+            { "spellcharges", HandleSpellChargesCheatCommand, rbac::RBAC_PERM_COMMAND_CHEAT_SPELLCHARGES, Console::No },
             { "power",     HandlePowerCheatCommand,     rbac::RBAC_PERM_COMMAND_CHEAT_POWER,     Console::No },
             { "waterwalk", HandleWaterWalkCheatCommand, rbac::RBAC_PERM_COMMAND_CHEAT_WATERWALK, Console::No },
             { "status",    HandleCheatStatusCommand,    rbac::RBAC_PERM_COMMAND_CHEAT_STATUS,    Console::No },
@@ -110,6 +111,29 @@ public:
         return true;
     }
 
+    static bool HandleSpellChargesCheatCommand(ChatHandler* handler, Optional<bool> enableArg)
+    {
+        Player* player = handler->GetSession()->GetPlayer();
+        bool enable = !player->GetCommandStatus(CHEAT_SPELLCHARGES);
+        if (enableArg)
+            enable = *enableArg;
+
+        if (enable)
+        {
+            player->SetCommandStatusOn(CHEAT_SPELLCHARGES);
+            player->RestoreAllSpellCharges();
+            player->SendAllSpellChargeStates();
+            handler->SendSysMessage("Spell Charges Cheat is ON. Your spell charges won't be consumed.");
+        }
+        else
+        {
+            player->SetCommandStatusOff(CHEAT_SPELLCHARGES);
+            handler->SendSysMessage("Spell Charges Cheat is OFF. Your spell charges will be consumed normally.");
+        }
+
+        return true;
+    }
+
     static bool HandlePowerCheatCommand(ChatHandler* handler, Optional<bool> enableArg)
     {
         bool enable = !handler->GetSession()->GetPlayer()->GetCommandStatus(CHEAT_POWER);
@@ -140,6 +164,7 @@ public:
         handler->SendSysMessage(LANG_COMMAND_CHEAT_STATUS);
         handler->PSendSysMessage(LANG_COMMAND_CHEAT_GOD, player->GetCommandStatus(CHEAT_GOD) ? enabled : disabled);
         handler->PSendSysMessage(LANG_COMMAND_CHEAT_CD, player->GetCommandStatus(CHEAT_COOLDOWN) ? enabled : disabled);
+        handler->PSendSysMessage(LANG_COMMAND_CHEAT_SPELLCHARGES, player->GetCommandStatus(CHEAT_SPELLCHARGES) ? enabled : disabled);
         handler->PSendSysMessage(LANG_COMMAND_CHEAT_CT, player->GetCommandStatus(CHEAT_CASTTIME) ? enabled : disabled);
         handler->PSendSysMessage(LANG_COMMAND_CHEAT_POWER, player->GetCommandStatus(CHEAT_POWER) ? enabled : disabled);
         handler->PSendSysMessage(LANG_COMMAND_CHEAT_WW, player->GetCommandStatus(CHEAT_WATERWALK) ? enabled : disabled);

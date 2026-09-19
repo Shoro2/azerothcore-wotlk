@@ -36,11 +36,12 @@ TalentSpellPos const* GetTalentSpellPos(uint32 spellId);
 
 WMOAreaTableEntry const* GetWMOAreaTableEntryByTripple(int32 rootid, int32 adtid, int32 groupid);
 
+// Area flag = AreaTableEntry::exploreFlag. It is not a key: in FL's AreaTable.dbc the custom areas of map 727 share
+// flags (each of 0 and 4000-4005 covers 3 to 17 areas), so there is no flag -> area lookup; look an area up by its
+// ID with sAreaTableStore.LookupEntry.
 // -1 if not found
 int32 GetAreaFlagByAreaID(uint32 area_id);
 uint32 GetAreaFlagByMapId(uint32 mapid);
-AreaTableEntry const* GetAreaEntryByAreaID(uint32 area_id);
-AreaTableEntry const* GetAreaEntryByAreaFlagAndMap(uint32 area_flag, uint32 map_id);
 
 uint32 GetVirtualMapForMapAndZone(uint32 mapid, uint32 zoneId);
 

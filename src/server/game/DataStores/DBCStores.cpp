@@ -29,7 +29,7 @@
 #include <algorithm>
 #include <map>
 
-typedef std::map<uint16, uint32> AreaFlagByAreaID;
+typedef std::map<uint32, uint32> AreaFlagByAreaID;
 typedef std::map<uint32, uint32> AreaFlagByMapID;
 
 typedef std::tuple<int16, int8, int32> WMOAreaTableKey;
@@ -394,12 +394,12 @@ void LoadDBCStores(std::string const& dataPath)
 
 #undef LOAD_DBC
 
-    for (uint32 i = 0; i < sAreaTableStore.GetNumRows(); ++i)    // areaflag numbered from 0
+    for (uint32 i = 0; i < sAreaTableStore.GetNumRows(); ++i)    // the store is indexed by area ID
     {
         if (AreaTableEntry const* area = sAreaTableStore.LookupEntry(i))
         {
             // fill AreaId->DBC records
-            sAreaFlagByAreaID.insert(AreaFlagByAreaID::value_type(uint16(area->ID), area->exploreFlag));
+            sAreaFlagByAreaID.insert(AreaFlagByAreaID::value_type(area->ID, area->exploreFlag));
 
             // fill MapId->DBC records ( skip sub zones and continents )
             if (area->zone == 0 && area->mapid != 0 && area->mapid != 1 && area->mapid != 530)
@@ -971,24 +971,4 @@ int32 GetAreaFlagByAreaID(uint32 area_id)
         return -1;
 
     return i->second;
-}
-
-AreaTableEntry const* GetAreaEntryByAreaID(uint32 area_id)
-{
-    int32 areaflag = GetAreaFlagByAreaID(area_id);
-    if (areaflag < 0)
-        return nullptr;
-
-    return sAreaTableStore.LookupEntry(areaflag);
-}
-
-AreaTableEntry const* GetAreaEntryByAreaFlagAndMap(uint32 area_flag, uint32 map_id)
-{
-    if (area_flag)
-        return sAreaTableStore.LookupEntry(area_flag);
-
-    if (MapEntry const* mapEntry = sMapStore.LookupEntry(map_id))
-        return GetAreaEntryByAreaID(mapEntry->linked_zone);
-
-    return nullptr;
 }

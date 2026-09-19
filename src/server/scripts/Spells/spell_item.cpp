@@ -5188,7 +5188,12 @@ class spell_item_aura_of_madness : public AuraScript
 
         PreventDefaultAction();
         Unit* caster = eventInfo.GetActor();
-        std::vector<uint32> const& randomSpells = triggeredSpells[caster->getClass()];
+        // The table has a row per stock class; a CoA class (ids 12-32) reads an
+        // empty one and the trinket silently never procs. Ask under the legacy
+        // class instead - it is identity for every stock class and for a
+        // creature's unit_class, so nothing else changes.
+        std::vector<uint32> const& randomSpells =
+            triggeredSpells[GetLegacyClassForCustomClass(Classes(caster->getClass()))];
         if (randomSpells.empty())
             return;
 
@@ -5300,7 +5305,12 @@ class spell_item_deathbringers_will_normal : public AuraScript
 
         PreventDefaultAction();
         Unit* caster = eventInfo.GetActor();
-        std::vector<uint32> const& randomSpells = triggeredSpells[caster->getClass()];
+        // The table has a row per stock class; a CoA class (ids 12-32) reads an
+        // empty one and the trinket silently never procs. Ask under the legacy
+        // class instead - it is identity for every stock class and for a
+        // creature's unit_class, so nothing else changes.
+        std::vector<uint32> const& randomSpells =
+            triggeredSpells[GetLegacyClassForCustomClass(Classes(caster->getClass()))];
         if (randomSpells.empty())
             return;
 
@@ -5347,7 +5357,12 @@ class spell_item_deathbringers_will_heroic : public AuraScript
 
         PreventDefaultAction();
         Unit* caster = eventInfo.GetActor();
-        std::vector<uint32> const& randomSpells = triggeredSpells[caster->getClass()];
+        // The table has a row per stock class; a CoA class (ids 12-32) reads an
+        // empty one and the trinket silently never procs. Ask under the legacy
+        // class instead - it is identity for every stock class and for a
+        // creature's unit_class, so nothing else changes.
+        std::vector<uint32> const& randomSpells =
+            triggeredSpells[GetLegacyClassForCustomClass(Classes(caster->getClass()))];
         if (randomSpells.empty())
             return;
 

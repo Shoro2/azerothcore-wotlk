@@ -22,7 +22,7 @@ The fork exists because the custom module set (`mod-paragon`, `mod-paragon-itemg
 ```
 azerothcore-wotlk (this fork)
    ├── contains custom hooks (see below)
-   ├── contains patched Spell.dbc with custom spell IDs (100xxx, 900xxx)
+   ├── needs a patched Spell.dbc with custom spell IDs (100xxx, 900xxx), kept outside this repo
    ├── modules/ ← all custom modules are symlinked or cloned here
    └── delivers worldserver + authserver binaries
 ```
@@ -33,12 +33,11 @@ All custom modules attach to hooks provided by `ScriptMgr`. The actual module lo
 
 | Area | Extension | Consumer |
 |---------|-------------|-----------|
-| **Hook** | `OnPlayerCheckReagent(Player*, uint32 itemId, uint32 count, bool& consumed)` | `mod-endless-storage` (historical; currently unused) |
-| **Hook** | `OnPlayerConsumeReagent(Player*, uint32 itemId, uint32 count)` | `mod-endless-storage` (historical; currently unused) |
-| **DBC** | `share/dbc/Spell.dbc` with custom spell entries 100000-100027, 100201-100227, 900100-900116, 920920, … | `mod-paragon`, `mod-paragon-itemgen`, `mod-custom-spells` |
-| **Tools** | `share/copy_spells_dbc.py` (with 6 safeguards against DBC corruption) | DBC maintenance |
+| **Guard** | `Spell::TakeReagents()` calls `DestroyItemCount` only when `itemcount > 0` (`src/server/game/Spells/Spell.cpp:5587`). The `OnPlayerCheckReagent` / `OnPlayerConsumeReagent` hooks were reverted in `0cb0773a7` and do not exist | every reagent cast |
+| **DBC** | Patched `Spell.dbc` with custom spell entries 100000-100027, 100201-100227, 900100-900116, 920920, … — **not tracked in this repo**; server and client copies: [`functions.md`](./functions.md#custom-spelldbc) | `mod-paragon`, `mod-paragon-itemgen`, `mod-custom-spells` |
+| **Tools** | share-public `python_scripts/copy_spells_dbc.py` (with 6 safeguards against DBC corruption); the current record-level patches are Forgotten Land workspace scripts, see [`functions.md`](./functions.md#custom-spelldbc) | DBC maintenance |
 
-Implementation details of the hooks: [`functions.md`](./functions.md#custom-hooks).
+Details of the guard and the reverted hooks: [`functions.md`](./functions.md#reagent-guard-hooks-reverted).
 
 ## Custom data
 
@@ -48,8 +47,8 @@ This fork brings **no** own DB schema (beyond upstream). All custom tables live 
 |---------|----------------|
 | `data/sql/base/db_world/` | Upstream schema — **do not edit** (CI warning, maintainer approval) |
 | `data/sql/updates/pending_*` | New SQL files for custom hook migrations land here if needed |
-| `share/dbc/` | DBC files including the project-specifically patched `Spell.dbc` |
-| `share/copy_spells_dbc.py`, `add_paragon_spell.py` | Maintenance tools |
+
+No DBC files or DBC tools live here (there is no `share/` directory): for the patched `Spell.dbc` see [`functions.md`](./functions.md#custom-spelldbc); `copy_spells_dbc.py` and `add_paragon_spell.py` are in share-public [`python_scripts/`](https://github.com/Shoro2/share-public/tree/main/python_scripts).
 
 ## Configuration
 
@@ -70,7 +69,7 @@ This fork brings **no** own DB schema (beyond upstream). All custom tables live 
 - **Build default**: `cmake .. -DSCRIPTS=static -DMODULES=static && make -j`. Because of `-Werror`, warnings become errors — custom patches must be warning-clean.
 - **Code style**: AzerothCore standard (`auto const&`, `Type const*`, 4 spaces, max 80 chars). Pre-commit checks via `apps/codestyle/codestyle-cpp.py` + `codestyle-sql.py`.
 - **CI**: macOS, Ubuntu (clang-15, clang-18, gcc-14), Windows. `-Werror` active. Module build separate.
-- **Spell.dbc corruption**: occurred in the past via `copy_spells_dbc.py` — the tool has had 6 safeguards since then. If corruption is suspected: restore the backup from `ac-share/data/dbc/Spell.dbc`, then merge custom spells back in via the tool.
+- **Spell.dbc corruption**: occurred in the past via `copy_spells_dbc.py` — the tool has had 6 safeguards since then. If corruption is suspected, restore the server copy from the nightly host backup, not from a legacy copy: see [`functions.md`](./functions.md#custom-spelldbc).
 
 ## License
 

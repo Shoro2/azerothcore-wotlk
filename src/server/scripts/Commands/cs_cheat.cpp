@@ -164,7 +164,8 @@ public:
         handler->SendSysMessage(LANG_COMMAND_CHEAT_STATUS);
         handler->PSendSysMessage(LANG_COMMAND_CHEAT_GOD, player->GetCommandStatus(CHEAT_GOD) ? enabled : disabled);
         handler->PSendSysMessage(LANG_COMMAND_CHEAT_CD, player->GetCommandStatus(CHEAT_COOLDOWN) ? enabled : disabled);
-        handler->PSendSysMessage(LANG_COMMAND_CHEAT_SPELLCHARGES, player->GetCommandStatus(CHEAT_SPELLCHARGES) ? enabled : disabled);
+        // The spell-charges status line (LANG_COMMAND_CHEAT_SPELLCHARGES, 35480) returns when its acore_string row
+        // lands (program milestone M4); without the row every status would print and log "No entry for acore_string".
         handler->PSendSysMessage(LANG_COMMAND_CHEAT_CT, player->GetCommandStatus(CHEAT_CASTTIME) ? enabled : disabled);
         handler->PSendSysMessage(LANG_COMMAND_CHEAT_POWER, player->GetCommandStatus(CHEAT_POWER) ? enabled : disabled);
         handler->PSendSysMessage(LANG_COMMAND_CHEAT_WW, player->GetCommandStatus(CHEAT_WATERWALK) ? enabled : disabled);

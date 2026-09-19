@@ -69,9 +69,9 @@
 
 // One handler per effect id, indexed by SpellEffectInfo::Effect.
 // The bound is deduced from the initializer on purpose: with an explicit
-// [TOTAL_SPELL_EFFECTS] bound a short list compiles silently and leaves the
-// tail nullptr, which Spell::HandleEffects would call. The static_assert below
-// the table makes a missing (or extra) entry a compile error instead.
+// [TOTAL_SPELL_EFFECTS] bound a short list compiles silently and pads the tail
+// with nullptr, which Spell::HandleEffects turns into EffectNULL - a silent no-op.
+// The static_assert below the table makes a missing (or extra) entry a compile error.
 // Spell.cpp declares this table extern without a bound (see the note there).
 pEffect SpellEffects[] =
 {

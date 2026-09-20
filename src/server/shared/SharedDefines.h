@@ -163,6 +163,13 @@ enum Classes
 // Every client class bit except Ascension's reserved classless/free-pick ID 10.
 #define CLASSMASK_ALL_PLAYABLE 0xFFFFFDFFu
 
+// The 12..32 range lives here. Two places outside this header cannot reach it
+// and mirror it as literals instead - move them with it or they go stale:
+//   * modules/mod-procedural-dungeon/src/generator/PDv2GameMath.h:580-582
+//     (PD_CLASS_CUSTOM_FIRST / _LAST; the generator header is deliberately
+//     engine-free and must not include this one);
+//   * modules/mod-custom-spells/lua/CustomSpells_Server.lua:217-218
+//     (CUSTOM_CLASS_FIRST / _LAST; Eluna Lua has no view of a C++ header).
 constexpr bool IsAscensionClass(uint8 classId)
 {
     return classId >= CLASS_BARBARIAN && classId <= CLASS_SPIRIT_MAGE;
@@ -217,9 +224,10 @@ constexpr uint32 ExpandLegacyClassMask(uint32 classMask)
 #define CLASSMASK_ALL_CREATURES ((1<<(CLASS_WARRIOR-1)) | (1<<(CLASS_PALADIN-1)) | (1<<(CLASS_ROGUE-1)) | (1<<(CLASS_MAGE-1)))
 
 // Classes whose RANGED SLOT is a wand. This is not "may equip a wand": the
-// three call sites suppress ranged attack power (which a wand does not use)
-// and take a wand shot's damage school from the wand, so the question is
-// whether the class shoots with one or with a bow, gun or crossbow.
+// five call sites - StatSystem.cpp:600, SpellAuraEffects.cpp:5087, :5111,
+// :5126 and Spell.cpp:622 - suppress ranged attack power (which a wand does
+// not use) and take a wand shot's damage school from the wand, so the question
+// is whether the class shoots with one or with a bow, gun or crossbow.
 //
 // The five CoA classes below are the ones CoA trains in Wands (spell 5009) and
 // in no physical ranged weapon at all - measured from its own creation rows

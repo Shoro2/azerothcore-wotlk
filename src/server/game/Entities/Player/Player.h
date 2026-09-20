@@ -1000,7 +1000,8 @@ enum PlayerCommandStates
     CHEAT_CASTTIME = 0x02,
     CHEAT_COOLDOWN = 0x04,
     CHEAT_POWER = 0x08,
-    CHEAT_WATERWALK = 0x10
+    CHEAT_WATERWALK = 0x10,
+    CHEAT_SPELLCHARGES = 0x20
 };
 
 // Used for OnGiveXP PlayerScript hook
@@ -1327,6 +1328,7 @@ public:
     InventoryResult CanUseItem(Item* pItem, bool not_loading = true) const;
     [[nodiscard]] bool HasItemTotemCategory(uint32 TotemCategory) const;
     bool IsTotemCategoryCompatiableWith(ItemTemplate const* pProto, uint32 requiredTotemCategoryId) const;
+    InventoryResult BotCanUseItem(ItemTemplate const* pItem) const;
     InventoryResult CanUseItem(ItemTemplate const* pItem) const;
     [[nodiscard]] InventoryResult CanUseAmmo(uint32 item) const;
     InventoryResult CanRollForItemInLFG(ItemTemplate const* item, WorldObject const* lootedObject) const;
@@ -1728,6 +1730,7 @@ public:
     bool _addSpell(uint32 spellId, uint8 addSpecMask, bool temporary, bool learnFromSkill = false);
     void learnSpell(uint32 spellId, bool temporary = false, bool learnFromSkill = false);
     void removeSpell(uint32 spellId, uint8 removeSpecMask, bool onlyTemporary);
+    void MarkSpellForSave(uint32 spellId);
     void resetSpells();
     void LearnCustomSpells();
     void LearnDefaultSkills();
@@ -1849,6 +1852,7 @@ public:
     void ConsumeSpellCharge(SpellInfo const* spellInfo, Spell* spell);
     void RestoreSpellCharge(uint32 spellId, uint32 count = 1);
     void RestoreSpellChargeCategory(uint32 categoryId, uint32 count);
+    void RestoreAllSpellCharges();
     void SendSpellChargeState(uint32 spellId) const;
     void SendAllSpellChargeStates() const;
     uint32 GetLastPotionId() { return m_lastPotionId; }
@@ -2112,10 +2116,13 @@ public:
     }
     bool IsMirrorTimerActive(MirrorTimerType type) { return m_MirrorTimer[type] == getMaxTimer(type); }
 
+    void SetMovement(PlayerMovementType pType);
+
     bool CanJoinConstantChannelInZone(ChatChannelsEntry const* channel, AreaTableEntry const* zone);
 
     void JoinedChannel(Channel* c);
     void LeftChannel(Channel* c);
+    bool IsInChannel(Channel const* c);
     void CleanupChannels();
     void ClearChannelWatch();
     void UpdateLFGChannel();
@@ -2733,6 +2740,8 @@ public:
     void UpdatePlayerSetting(std::string const& source, uint32 index, uint32 value);
 
     void SendSystemMessage(std::string_view msg, bool escapeCharacters = false);
+
+    void ResetSpeakTimers();
 
     std::string GetDebugInfo() const override;
 

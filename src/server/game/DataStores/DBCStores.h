@@ -22,6 +22,7 @@
 #include "DBCStore.h"
 #include "DBCStructure.h"
 #include <list>
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -34,6 +35,13 @@ uint32 GetTalentSpellCost(uint32 spellId);
 TalentSpellPos const* GetTalentSpellPos(uint32 spellId);
 
 WMOAreaTableEntry const* GetWMOAreaTableEntryByTripple(int32 rootid, int32 adtid, int32 groupid);
+
+// Area flag = AreaTableEntry::exploreFlag. It is not a key: FL's custom areas share flags (every sub-area of a custom
+// zone carries the zone's flag), so there is no flag -> area lookup; look an area up by its ID with
+// sAreaTableStore.LookupEntry.
+// -1 if not found
+int32 GetAreaFlagByAreaID(uint32 area_id);
+uint32 GetAreaFlagByMapId(uint32 mapid);
 
 uint32 GetVirtualMapForMapAndZone(uint32 mapid, uint32 zoneId);
 
@@ -195,5 +203,7 @@ extern DBCStorage <WMOAreaTableEntry>            sWMOAreaTableStore;
 extern DBCStorage <WorldMapOverlayEntry>         sWorldMapOverlayStore;
 
 void LoadDBCStores(std::string const& dataPath);
+/// Path of a client DBC in the directory LoadDBCStores read, for tables read with ClientDBC.
+std::string GetClientDBCPath(std::string_view fileName);
 
 #endif

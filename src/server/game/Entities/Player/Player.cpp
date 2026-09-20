@@ -847,6 +847,10 @@ uint32 Player::EnvironmentalDamage(EnviromentalDamage type, uint32 damage)
     if (type != DAMAGE_FALL_TO_VOID && IsImmuneToEnvironmentalDamage())
         return 0;
 
+    // Allow scripts (e.g. mod-coa-challenges) to veto environmental damage.
+    if (!sScriptMgr->OnPlayerEnvironmentalDamage(this, type, damage))
+        return 0;
+
     // Absorb, resist some environmental damage type
     uint32 absorb = 0;
     uint32 resist = 0;
@@ -922,11 +926,22 @@ int32 Player::getMaxTimer(MirrorTimerType timer)
 
 void Player::HandleDrowning(uint32 time_diff)
 {
-    if (!m_MirrorTimerFlags)
+    // Scripts (mod-coa-challenges INVERTED_BREATH) can flip breathing: drown on
+    // land, recover underwater. An inverted player must be processed even on
+    // land, where m_MirrorTimerFlags is 0.
+    bool const inverted = sScriptMgr->OnPlayerBreathInverted(this);
+
+    if (!m_MirrorTimerFlags && !inverted)
         return;
 
-    // In water
-    if (m_MirrorTimerFlags & UNDERWATER_INWATER)
+    // Only the breath timer inverts its "in water" condition.
+    bool const underwaterNow = (m_MirrorTimerFlags & UNDERWATER_INWATER) != 0;
+    bool const underwaterLast = (m_MirrorTimerFlagsLast & UNDERWATER_INWATER) != 0;
+    bool const breathDrainsNow = inverted ? !underwaterNow : underwaterNow;
+    bool const breathDrainsLast = inverted ? !underwaterLast : underwaterLast;
+
+    // In water (or on land when inverted)
+    if (breathDrainsNow)
     {
         // Breath timer not activated - activate it
         if (m_MirrorTimer[BREATH_TIMER] == DISABLED_MIRROR_TIMER)
@@ -946,7 +961,7 @@ void Player::HandleDrowning(uint32 time_diff)
                 uint32 damage = GetMaxHealth() / 5 + urand(0, GetLevel() - 1);
                 EnvironmentalDamage(DAMAGE_DROWNING, damage);
             }
-            else if (!(m_MirrorTimerFlagsLast & UNDERWATER_INWATER))      // Update time in client if need
+            else if (!breathDrainsLast)                                   // Update time in client if need
                 SendMirrorTimer(BREATH_TIMER, getMaxTimer(BREATH_TIMER), m_MirrorTimer[BREATH_TIMER], -1);
         }
     }
@@ -957,7 +972,7 @@ void Player::HandleDrowning(uint32 time_diff)
         m_MirrorTimer[BREATH_TIMER] += 10 * time_diff;
         if (m_MirrorTimer[BREATH_TIMER] >= UnderWaterTime || !IsAlive())
             StopMirrorTimer(BREATH_TIMER);
-        else if (m_MirrorTimerFlagsLast & UNDERWATER_INWATER)
+        else if (breathDrainsLast)
             SendMirrorTimer(BREATH_TIMER, UnderWaterTime, m_MirrorTimer[BREATH_TIMER], 10);
     }
 
@@ -1869,7 +1884,11 @@ void Player::RegenerateAll()
         }
 
         Regenerate(POWER_RAGE);
-        if (IsClass(CLASS_DEATH_KNIGHT, CLASS_CONTEXT_ABILITY))
+        // Rage above is regenerated for whoever actually runs on it. Runic power needs the same
+        // treatment: custom classes can carry it as their display power (ChrClasses.dbc gives the
+        // Reaper power type 6) while answering no to a Death Knight ability-context check, which
+        // left their bar frozen out of combat.
+        if (IsClass(CLASS_DEATH_KNIGHT, CLASS_CONTEXT_ABILITY) || HasActivePowerType(POWER_RUNIC_POWER))
             Regenerate(POWER_RUNIC_POWER);
 
         m_regenTimerCount -= 2000;
@@ -1935,6 +1954,9 @@ void Player::Regenerate(Powers power)
 
     /// @todo: possible use of miscvalueb instead of amount
     if (HasAuraTypeWithMiscvalue(SPELL_AURA_PREVENT_REGENERATE_POWER, power + 1))
+        return;
+
+    if (!sScriptMgr->OnPlayerCanRegenerate(this, int32(power)))
         return;
 
     float addvalue = 0.0f;
@@ -2061,6 +2083,9 @@ void Player::RegenerateHealth()
 {
     // Copied Resynchronization records use POWER_HEALTH for the health regeneration lock.
     if (HasAuraTypeWithMiscvalue(SPELL_AURA_PREVENT_REGENERATE_POWER, POWER_HEALTH))
+        return;
+
+    if (!sScriptMgr->OnPlayerCanRegenerate(this, POWER_HEALTH))
         return;
 
     uint32 curValue = GetHealth();
@@ -3251,6 +3276,11 @@ bool Player::CheckSkillLearnedBySpell(uint32 spellId)
     if (!sWorld->getBoolConfig(CONFIG_VALIDATE_SKILL_LEARNED_BY_SPELLS))
         return true;
 
+    // CoA classes share spells across class skill lines and CoA removed this check;
+    // FL keeps it for the stock classes.
+    if (IsAscensionClass(getClass()))
+        return true;
+
     SkillLineAbilityMapBounds skill_bounds = sSpellMgr->GetSkillLineAbilityMapBounds(spellId);
     uint32 errorSkill = 0;
     for (SkillLineAbilityMap::const_iterator sla = skill_bounds.first; sla != skill_bounds.second; ++sla)
@@ -3291,6 +3321,9 @@ bool Player::_addSpell(uint32 spellId, uint8 addSpecMask, bool temporary, bool l
     // xinef: send packet so client can properly recognize this new spell
     // xinef: ignore passive spells and spells with learn effect
     // xinef: send spells with no aura effects (ie dual wield)
+    // This site owns the announcement for a temporary learn that did not come from a skill line, and its
+    // condition mirrors the one Player::removeSpell uses for onlyTemporary. Player::learnSpell must not
+    // announce the same grant again, or the client ends up with more copies than the server ever removes.
     if (IsInWorld() && !isBeingLoaded() && temporary && !learnFromSkill && (!spellInfo->HasAttribute(SpellAttr0(SPELL_ATTR0_PASSIVE | SPELL_ATTR0_DO_NOT_DISPLAY)) || !spellInfo->HasAnyAura()) && !spellInfo->HasEffect(SPELL_EFFECT_LEARN_SPELL))
         SendLearnPacket(spellInfo->Id, true);
 
@@ -3475,7 +3508,11 @@ void Player::learnSpell(uint32 spellId, bool temporary /*= false*/, bool learnFr
         sScriptMgr->OnPlayerLearnSpell(this, spellId);
 
         // pussywizard: a system message "you have learnt spell X (rank Y)"
-        if (IsInWorld())
+        // Player::_addSpell already sent this packet for a temporary learn that did not come from a skill line,
+        // and Player::removeSpell answers such a grant with a single SMSG_REMOVED_SPELL. Announcing it twice
+        // leaves the client one extra copy of the spell per grant/revoke cycle, which both hides the real
+        // spellbook entry behind duplicates and keeps the client believing a revoked spell is still known.
+        if (IsInWorld() && (!temporary || learnFromSkill))
             SendLearnPacket(spellId, true);
     }
 
@@ -3538,6 +3575,20 @@ uint8 Player::GetLearnSpellSpecMask(uint32 spellId) const
     }
 
     return specMask;
+}
+
+void Player::MarkSpellForSave(uint32 spellId)
+{
+    // Player::_addSpell files a grant made while the session is still loading as PLAYERSPELL_UNCHANGED,
+    // because that state otherwise means "already stored in character_spell". A script that grants a spell
+    // inside the login window therefore never reaches the insert in Player::_SaveSpells. Promoting the entry
+    // to PLAYERSPELL_CHANGED makes the next character save write it out. That save is a DELETE + INSERT pair
+    // on the same spell, so calling this for a spell that is already stored is harmless.
+    PlayerSpellMap::iterator itr = m_spells.find(spellId);
+    if (itr == m_spells.end() || itr->second->State != PLAYERSPELL_UNCHANGED)
+        return;
+
+    itr->second->State = PLAYERSPELL_CHANGED;
 }
 
 void Player::removeSpell(uint32 spell_id, uint8 removeSpecMask, bool onlyTemporary)
@@ -5159,6 +5210,15 @@ void Player::CleanupChannels()
         m_channels.erase(m_channels.begin());               // remove from player's channel list
         ch->LeaveChannel(this, false);                     // not send to client, not remove from player's channel list
     }
+}
+
+// Playerbot helper if bot talks in a different locale
+bool Player::IsInChannel(Channel const* c)
+{
+    return std::any_of(m_channels.begin(), m_channels.end(), [c](Channel const* chan)
+    {
+        return c->GetChannelId() == chan->GetChannelId();
+    });
 }
 
 void Player::ClearChannelWatch()
@@ -7761,8 +7821,19 @@ void Player::CastItemUseSpell(Item* item, SpellCastTargets const& targets, uint8
     }
 
     // xinef: send all spells in one go, prevents crash because container is not set
+    ObjectGuid const itemGuid = item->GetGUID();
     for (std::list<Spell*>::const_iterator itr = pushSpells.begin(); itr != pushSpells.end(); ++itr)
+    {
+        // An earlier spell can use the item's last charge and destroy it; an item that was never saved is
+        // deleted at once, so the remaining spells must not be prepared with it.
+        if (!GetItemByGuid(itemGuid))
+        {
+            delete *itr;
+            continue;
+        }
+
         (*itr)->prepare(&targets);
+    }
 }
 
 void Player::_RemoveAllItemMods()
@@ -8485,16 +8556,23 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
             for (uint8 index = 0; index < count; ++index)
             {
                 uint8 slot, slotType;
-                data >> slot;
-                data.read_skip(5 * sizeof(uint32)); // Native LootItem packet fields
+                uint32 itemId, itemCount;
+                data >> slot >> itemId >> itemCount;
+                data.read_skip(3 * sizeof(uint32)); // Display, random suffix and random property
                 data >> slotType;
                 if (slotType != LOOT_SLOT_TYPE_ALLOW_LOOT && slotType != LOOT_SLOT_TYPE_OWNER)
+                    continue;
+                // Leave what does not fit on the corpse, but keep walking the view instead of
+                // aborting it: the serializer writes quest items after the normal ones, so a
+                // single unstorable drop would otherwise hide every later slot. Testing storage
+                // here also keeps the automatic retry silent, where Player::StoreLootItem would
+                // send an inventory error to the client on every companion tick.
+                ItemPosCountVec dest;
+                if (CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, itemId, itemCount) != EQUIP_ERR_OK)
                     continue;
                 sScriptMgr->OnPlayerAfterCreatureLoot(this);
                 InventoryResult result;
                 StoreLootItem(slot, loot, result);
-                if (result != EQUIP_ERR_OK)
-                    break; // Leave uncollected items on the corpse when bags are full.
             }
             WorldPacket money;
             m_session->HandleLootMoneyOpcode(money);
@@ -9684,7 +9762,15 @@ void Player::StopCastingCharm(Aura* except /*= nullptr*/)
         if (charm->GetCharmerGUID())
         {
             LOG_FATAL("entities.player", "Charmed unit has charmer {}", charm->GetCharmerGUID().ToString());
-            ABORT();
+            // Conquest of Azeroth: a Tinker killed while controlling its Destructo-Bot (50300)
+            // reaches this point with the charm half released. Stopping the whole server for
+            // one creature is worse than forcing the release.
+            LOG_ERROR("entities.player", "Player::StopCastingCharm - forcing the release of {} by {}",
+                      charm->GetGUID().ToString(), GetGUID().ToString());
+            if (charm->GetCharmerGUID() == GetGUID())
+                charm->RemoveCharmedBy(this);
+            if (GetCharmGUID())
+                SetGuidValue(UNIT_FIELD_CHARM, ObjectGuid::Empty);
         }
         else
         {
@@ -10148,9 +10234,11 @@ void Player::ApplySpellMod(uint32 spellId, SpellModOp op, T& basevalue, Spell* s
         if (temporaryPet && mod->ownerAura && mod->ownerAura->IsUsingCharges())
             return;
 
-        // skip if already instant or cost is free
+        // skip if already instant or cost is free; a flat cast time increase can still give an instant spell a cast
+        // time (Templar Holy Light makes the instant Benediction a 1.5 sec cast)
         if (mod->op == SPELLMOD_CASTING_TIME || mod->op == SPELLMOD_COST)
-            if (((float)basevalue + (float)basevalue * (totalmul - 1.0f) + (float)totalflat) <= 0)
+            if (((float)basevalue + (float)basevalue * (totalmul - 1.0f) + (float)totalflat) <= 0 &&
+                !(mod->op == SPELLMOD_CASTING_TIME && mod->type == SPELLMOD_FLAT && mod->value > 0))
                 return;
 
         if (mod->type == SPELLMOD_FLAT)
@@ -17078,7 +17166,7 @@ void Player::StoreSpellCharges(SpellInfo const* spellInfo, SpellChargeState cons
 
 void Player::ConsumeSpellCharge(SpellInfo const* spellInfo, Spell* spell)
 {
-    if (!spellInfo->MaxCharges || GetCommandStatus(CHEAT_COOLDOWN))
+    if (!spellInfo->MaxCharges || GetCommandStatus(CHEAT_COOLDOWN) || GetCommandStatus(CHEAT_SPELLCHARGES))
         return;
     int32 recovery = int32(spellInfo->ChargeRecoveryTime);
     ApplySpellMod(spellInfo->Id, SPELLMOD_COOLDOWN, recovery, spell);
@@ -17134,6 +17222,23 @@ void Player::RestoreSpellChargeCategory(uint32 categoryId, uint32 count)
         if (playerSpell->State != PLAYERSPELL_REMOVED && info && info->MaxCharges &&
             info->ChargeCategoryId == categoryId && restored.insert(info->ChargeRecoveryKey).second)
             RestoreSpellCharge(spellId, count);
+    }
+}
+
+void Player::RestoreAllSpellCharges()
+{
+    // Ranks share a recovery key, so each pool is restored once.
+    std::unordered_set<uint32> restored;
+    for (auto const& [spellId, playerSpell] : m_spells)
+    {
+        if (playerSpell->State == PLAYERSPELL_REMOVED || !playerSpell->Active)
+            continue;
+        SpellInfo const* info = sSpellMgr->GetSpellInfo(spellId);
+        if (!info || !info->MaxCharges || !info->ChargeRecoveryKey)
+            continue;
+        if (!restored.insert(info->ChargeRecoveryKey).second)
+            continue;
+        RestoreSpellCharge(spellId, info->MaxCharges);
     }
 }
 

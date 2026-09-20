@@ -207,6 +207,11 @@ void ScriptMgr::OnPlayerBeforeUpdate(Player* player, uint32 p_time)
     CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_BEFORE_UPDATE, script->OnPlayerBeforeUpdate(player, p_time));
 }
 
+void ScriptMgr::OnPlayerAfterUpdate(Player* player, uint32 p_time)
+{
+    CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_AFTER_UPDATE, script->OnPlayerAfterUpdate(player, p_time));
+}
+
 void ScriptMgr::OnPlayerUpdate(Player* player, uint32 p_time)
 {
     CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_UPDATE, script->OnPlayerUpdate(player, p_time));
@@ -317,12 +322,12 @@ void ScriptMgr::OnPlayerCriteriaProgress(Player* player, AchievementCriteriaEntr
     CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_CRITERIA_PROGRESS, script->OnPlayerCriteriaProgress(player, criteria));
 }
 
-void ScriptMgr::OnPlayerAchievementSave(CharacterDatabaseTransaction trans, Player* player, uint16 achiId, CompletedAchievementData achiData)
+void ScriptMgr::OnPlayerAchievementSave(CharacterDatabaseTransaction trans, Player* player, uint32 achiId, CompletedAchievementData achiData)
 {
     CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_ACHI_SAVE, script->OnPlayerAchievementSave(trans, player, achiId, achiData));
 }
 
-void ScriptMgr::OnPlayerCriteriaSave(CharacterDatabaseTransaction trans, Player* player, uint16 critId, CriteriaProgress criteriaData)
+void ScriptMgr::OnPlayerCriteriaSave(CharacterDatabaseTransaction trans, Player* player, uint32 critId, CriteriaProgress criteriaData)
 {
     CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_CRITERIA_SAVE, script->OnPlayerCriteriaSave(trans, player, critId, criteriaData));
 }
@@ -928,9 +933,34 @@ bool ScriptMgr::OnPlayerCanResurrect(Player* player)
     CALL_ENABLED_BOOLEAN_HOOKS(PlayerScript, PLAYERHOOK_CAN_RESURRECT, !script->OnPlayerCanResurrect(player));
 }
 
+bool ScriptMgr::OnPlayerCanEnterManastorm(Player* player)
+{
+    CALL_ENABLED_BOOLEAN_HOOKS(PlayerScript, PLAYERHOOK_CAN_ENTER_MANASTORM, !script->OnPlayerCanEnterManastorm(player));
+}
+
+bool ScriptMgr::OnPlayerEnvironmentalDamage(Player* player, uint32 type, uint32 damage)
+{
+    CALL_ENABLED_BOOLEAN_HOOKS(PlayerScript, PLAYERHOOK_ON_PLAYER_ENVIRONMENTAL_DAMAGE, !script->OnPlayerEnvironmentalDamage(player, type, damage));
+}
+
+bool ScriptMgr::OnPlayerBreathInverted(Player* player)
+{
+    CALL_ENABLED_BOOLEAN_HOOKS_WITH_DEFAULT_FALSE(PlayerScript, PLAYERHOOK_ON_PLAYER_BREATH_INVERTED, script->OnPlayerBreathInverted(player));
+}
+
 bool ScriptMgr::OnPlayerCanGiveLevel(Player* player, uint8 newLevel)
 {
     CALL_ENABLED_BOOLEAN_HOOKS(PlayerScript, PLAYERHOOK_ON_CAN_GIVE_LEVEL, !script->OnPlayerCanGiveLevel(player, newLevel));
+}
+
+bool ScriptMgr::OnPlayerCanRegenerate(Player* player, int32 power)
+{
+    CALL_ENABLED_BOOLEAN_HOOKS(PlayerScript, PLAYERHOOK_ON_CAN_REGENERATE, !script->OnPlayerCanRegenerate(player, power));
+}
+
+bool ScriptMgr::OnPlayerCanEnergize(Player* player, int32 power)
+{
+    CALL_ENABLED_BOOLEAN_HOOKS(PlayerScript, PLAYERHOOK_ON_CAN_ENERGIZE, !script->OnPlayerCanEnergize(player, power));
 }
 
 void ScriptMgr::OnPlayerSendListInventory(Player* player, ObjectGuid vendorGuid, uint32& vendorEntry)

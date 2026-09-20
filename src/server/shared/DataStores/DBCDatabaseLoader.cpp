@@ -60,12 +60,15 @@ char* DBCDatabaseLoader::Load(uint32& records, char**& indexTable)
     uint32 maxIndexValue = 0;
 
     // Insert sql data into the data array
-    // the index table is resized only after all rows are read, do not access it in this loop
+    // the index table is resized only after all rows are read, so it is read here only below its current size
     do
     {
         Field* fields = result->Fetch();
         uint32 indexValue = fields[_sqlIndexPos].Get<uint32>();
         maxIndexValue = std::max(maxIndexValue, indexValue);
+
+        // the record the DBC file already holds for this index, if any (an empty SQL string keeps its string)
+        char* oldDataValue = indexValue < records ? indexTable[indexValue] : nullptr;
 
         // If exist in DBC file override from DB
         newIndexes[newRecords] = indexValue;
@@ -93,7 +96,15 @@ char* DBCDatabaseLoader::Load(uint32& records, char**& indexTable)
                     dataOffset += sizeof(uint8);
                     break;
                 case FT_STRING:
-                    *reinterpret_cast<char**>(&dataValue[dataOffset]) = CloneStringToPool(fields[sqlColumnNumber].Get<std::string>());
+                    // not override string if new string is empty
+                    if (fields[sqlColumnNumber].Get<std::string>().empty() && oldDataValue)
+                    {
+                        *reinterpret_cast<char**>(&dataValue[dataOffset]) = *reinterpret_cast<char**>(&oldDataValue[dataOffset]);
+                    }
+                    else
+                    {
+                        *reinterpret_cast<char**>(&dataValue[dataOffset]) = CloneStringToPool(fields[sqlColumnNumber].Get<std::string>());
+                    }
                     dataOffset += sizeof(char*);
                     break;
                 case FT_SORT:

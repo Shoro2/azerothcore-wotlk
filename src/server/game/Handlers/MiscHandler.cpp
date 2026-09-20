@@ -315,9 +315,20 @@ void WorldSession::HandleWhoOpcode(WorldPacket& recvData)
         }
 
         // check if class matches classmask
-        // the client mask has 32 bits: class ids >= 32 cannot be filtered and are never excluded
+        //
+        // The who mask is built with bit = class id, not class id - 1, so the
+        // 33 classes need 33 bits and the packet carries 32. The client builds
+        // the mask with the same shift on x86, where a shift count is taken
+        // mod 32, so its bit for class 32 lands on bit 0 - the one bit no
+        // class of its own ever uses. Wrapping here the same way makes the
+        // filter agree with the client in both directions: "Runemasters only"
+        // lists Runemasters, and "Warriors only" stops listing them.
+        //
+        // This replaces our earlier `class_ < 32` guard, which never excluded
+        // class 32 from any filter (P0 exclusion E12, deferred here).
         uint8 class_ = target.GetClass();
-        if (class_ < 32 && !(classmask & (uint32(1) << class_)))
+        uint32 const classBit = class_ < 32 ? (uint32(1) << class_) : class_ == 32 ? 1u : 0u;
+        if (!(classmask & classBit))
         {
             continue;
         }

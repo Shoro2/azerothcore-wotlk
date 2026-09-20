@@ -216,7 +216,26 @@ constexpr uint32 ExpandLegacyClassMask(uint32 classMask)
 // valid classes for creature_template.unit_class
 #define CLASSMASK_ALL_CREATURES ((1<<(CLASS_WARRIOR-1)) | (1<<(CLASS_PALADIN-1)) | (1<<(CLASS_ROGUE-1)) | (1<<(CLASS_MAGE-1)))
 
-#define CLASSMASK_WAND_USERS ((1<<(CLASS_PRIEST-1))|(1<<(CLASS_MAGE-1))|(1<<(CLASS_WARLOCK-1)))
+// Classes whose RANGED SLOT is a wand. This is not "may equip a wand": the
+// three call sites suppress ranged attack power (which a wand does not use)
+// and take a wand shot's damage school from the wand, so the question is
+// whether the class shoots with one or with a bow, gun or crossbow.
+//
+// The five CoA classes below are the ones CoA trains in Wands (spell 5009) and
+// in no physical ranged weapon at all - measured from its own creation rows
+// (playercreateinfo_spell_custom of world package coa-world-20260912: 264 bow,
+// 266 gun, 5011 crossbow, 75 auto shot). The other nine CoA classes that can
+// hold a wand - 13, 14, 18, 20, 25, 26, 27, 29, 31 - are trained in a physical
+// ranged weapon as well and keep their ranged attack power, which is why the
+// legacy class is NOT the rule here: it would take in 27 Sun Cleric (a legacy
+// priest with bows and crossbows) and miss 16 Stormbringer and 32 Runemaster
+// (legacy shamans with nothing but a wand).
+//
+// 1u, not 1: class 32 is bit 31, and shifting a signed 1 there is UB.
+#define CLASSMASK_WAND_USERS ((1u<<(CLASS_PRIEST-1))|(1u<<(CLASS_MAGE-1))|(1u<<(CLASS_WARLOCK-1))| \
+                              (1u<<(CLASS_STORMBRINGER-1))|(1u<<(CLASS_CHRONOMANCER-1))| \
+                              (1u<<(CLASS_NECROMANCER-1))|(1u<<(CLASS_PYROMANCER-1))| \
+                              (1u<<(CLASS_SPIRIT_MAGE-1)))
 
 #define PLAYER_MAX_BATTLEGROUND_QUEUES 2
 

@@ -874,10 +874,25 @@ void Player::UpdateParryPercentage()
     // No parry
     float value = 0.0f;
     m_realParry = 0.0f;
-    // Starcaller learns Parry, unlike its general Druid stat fallback.
-    // Use the Hunter parry curve for both its cap and diminishing coefficient.
-    Classes const parryClass = getClass() == CLASS_STARCALLER ? CLASS_HUNTER :
-        GetLegacyClassForCustomClass(Classes(getClass()));
+    // A CoA class can be taught Parry although its legacy class cannot parry
+    // at all. CoA's own creation rows grant spell 3124 to classes 15, 17, 18,
+    // 26, 29 and 30 (plus 21 by training), and of those only 26 Starcaller
+    // has a legacy class - druid - whose cap is 0. A zero cap is not "no
+    // bonus" here: it is the `parry_cap[pclass] > 0.0f` gate below refusing to
+    // compute parry at all, so the class would carry the skill and never
+    // parry once.
+    //
+    // CoA fixes this by naming Starcaller and using the hunter curve. We keep
+    // its numbers - hunter cap and hunter diminishing coefficient, so a
+    // Starcaller parries exactly as it does on CoA - but state the rule
+    // instead of the class, so the next CoA pin that teaches Parry to another
+    // druid-, priest-, mage- or warlock-fallback class does not need this
+    // line edited again. coa_classes.json's "fallback: 11" for Starcaller is
+    // not contradicted: that field is the gt-table and ChrClasses template
+    // source, and it still is - this is one formula's exception to it.
+    Classes parryClass = GetLegacyClassForCustomClass(Classes(getClass()));
+    if (IsAscensionClass(getClass()) && parry_cap[parryClass - 1] <= 0.0f)
+        parryClass = CLASS_HUNTER;
     uint32 const pclass = parryClass - 1;
     if (CanParry() && parry_cap[pclass] > 0.0f)
     {

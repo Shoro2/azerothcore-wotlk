@@ -326,9 +326,18 @@ void WorldSession::HandleWhoOpcode(WorldPacket& recvData)
         //
         // This replaces our earlier `class_ < 32` guard, which never excluded
         // class 32 from any filter (P0 exclusion E12, deferred here).
+        //
+        // A class id ABOVE 32 keeps that old guard's answer: it is listed and
+        // never filtered out. It cannot occur while MAX_CLASSES is 33, and it
+        // has no bit at all in a 32-bit mask - not even a wrapped one - so no
+        // filter the client can send could name it. Giving it bit 0 would list
+        // it in every "Runemasters only" search; giving it no bit would hide it
+        // even from a search that filters on no class at all, because "all
+        // classes" arrives as every bit set and `mask & 0` is 0 whatever the
+        // player chose. Listing it is the half of an impossible case that
+        // loses no character.
         uint8 class_ = target.GetClass();
-        uint32 const classBit = class_ < 32 ? (uint32(1) << class_) : class_ == 32 ? 1u : 0u;
-        if (!(classmask & classBit))
+        if (class_ <= 32 && !(classmask & (class_ < 32 ? (uint32(1) << class_) : 1u)))
         {
             continue;
         }

@@ -8819,6 +8819,8 @@ float Unit::SpellPctDamageModsDone(Unit* victim, SpellInfo const* spellProto, Da
     uint32 creatureTypeMask = victim->GetCreatureTypeMask();
     DoneTotalMod *= GetTotalAuraMultiplier(SPELL_AURA_MOD_DAMAGE_DONE_VERSUS, [creatureTypeMask, spellProto, damagetype, this](AuraEffect const* aurEff)
     {
+        if (aurEff->GetMiscValueB() == ASCENSION_CLASSMASK_CREATURE_DAMAGE && !aurEff->IsAffectedOnSpell(spellProto))
+            return false;
         return creatureTypeMask & aurEff->GetMiscValue() && spellProto->ValidateAttribute6SpellDamageMods(this, aurEff, damagetype == DOT);
     });
 
@@ -10726,6 +10728,9 @@ uint32 Unit::MeleeDamageBonusDone(Unit* victim, uint32 pdamage, WeaponAttackType
 
     DoneTotalMod *= GetTotalAuraMultiplier(SPELL_AURA_MOD_DAMAGE_DONE_VERSUS, [creatureTypeMask, spellProto, this](AuraEffect const* aurEff)
     {
+        if (aurEff->GetMiscValueB() == ASCENSION_CLASSMASK_CREATURE_DAMAGE &&
+            (!spellProto || !aurEff->IsAffectedOnSpell(spellProto)))
+            return false;
         return (creatureTypeMask & aurEff->GetMiscValue() && (!spellProto || spellProto->ValidateAttribute6SpellDamageMods(this, aurEff, false)));
     });
 

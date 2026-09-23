@@ -2646,6 +2646,7 @@ void Spell::DoAllEffectOnTarget(TargetInfo* target)
     SpellMissInfo scriptMissInfo = missInfo;
     uint32 scriptDamageResult = 0;
     m_scriptHealthLeechDamage = 0;
+    m_scriptHealingIncludingOverheal = 0;
 
     // Need init unitTarget by default unit (can changed in code on reflect)
     // Or on missInfo != SPELL_MISS_NONE unitTarget undefined (but need in trigger subsystem)
@@ -2818,6 +2819,7 @@ void Spell::DoAllEffectOnTarget(TargetInfo* target)
         }
 
         int32 gain = caster->HealBySpell(healInfo, crit);
+        m_scriptHealingIncludingOverheal = healInfo.GetHeal();
         float threat = float(gain) * 0.5f;
         if (caster->IsClass(CLASS_PALADIN))
             threat *= 0.5f;

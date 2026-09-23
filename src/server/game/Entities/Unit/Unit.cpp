@@ -9260,7 +9260,31 @@ uint32 Unit::SpellDamageBonusDone(Unit* victim, SpellInfo const* spellProto, uin
     }
 
     // Done fixed damage bonus auras
-    DoneAdvertisedBenefit += SpellBaseDamageBonusDone(spellProto->GetSchoolMask());
+    // These physical Primalist effects explicitly scale with Nature spell power.
+    // Keep physical mitigation and the normal coefficient/modifier path.
+    SpellSchoolMask spellPowerSchool = spellProto->GetSchoolMask();
+    if (spellProto->SpellFamilyName == 37 &&
+        spellPowerSchool == SPELL_SCHOOL_MASK_NORMAL && effIndex == EFFECT_0 &&
+        spellProto->Effects[EFFECT_0].Effect == SPELL_EFFECT_SCHOOL_DAMAGE)
+    {
+        constexpr uint32 PrimalistJudgementDamage = 520468;
+        uint32 firstRank = spellProto->GetFirstRankSpell()->Id;
+        if (spellProto->Id == PrimalistJudgementDamage ||
+            (spellProto->DmgClass == SPELL_DAMAGE_CLASS_MAGIC &&
+                (spellProto->Id == 803138 || spellProto->Id == 681251 || spellProto->Id == 302590 ||
+                    firstRank == 680448 || firstRank == 680442 || firstRank == 681119)))
+            spellPowerSchool = SPELL_SCHOOL_MASK_NATURE;
+    }
+    if (spellProto->Id == 803140 && spellProto->SpellFamilyName == 37 &&
+        spellPowerSchool == (SPELL_SCHOOL_MASK_FIRE | SPELL_SCHOOL_MASK_NATURE) &&
+        spellProto->DmgClass == SPELL_DAMAGE_CLASS_MAGIC && effIndex == EFFECT_0 &&
+        spellProto->Effects[EFFECT_0].Effect == SPELL_EFFECT_SCHOOL_DAMAGE)
+        // Eruption uses the higher school bonus, not their sum. Leave the
+        // damage school unchanged for native resistance and damage modifiers.
+        DoneAdvertisedBenefit += std::max(SpellBaseDamageBonusDone(SPELL_SCHOOL_MASK_FIRE),
+            SpellBaseDamageBonusDone(SPELL_SCHOOL_MASK_NATURE));
+    else
+        DoneAdvertisedBenefit += SpellBaseDamageBonusDone(spellPowerSchool);
 
     // Check for table values
     float coeff = spellProto->Effects[effIndex].BonusMultiplier;

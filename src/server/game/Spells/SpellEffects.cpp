@@ -384,7 +384,7 @@ void Spell::EffectAscensionModifyCooldown(SpellEffIndex effIndex)
     if (effectHandleMode != SPELL_EFFECT_HANDLE_HIT_TARGET)
         return;
 
-    Unit* target = unitTarget ? unitTarget : m_caster;
+    Unit* target = unitTarget ? unitTarget : m_caster->ToUnit();
     Player* player = target ? target->ToPlayer() : nullptr;
     SpellEffectInfo const& effect = m_spellInfo->Effects[effIndex];
     ModifyAscensionCooldown(player, effect.MiscValue, damage, effect.MiscValueB != 0);
@@ -395,12 +395,16 @@ void Spell::EffectAscensionRestoreBaseManaPct(SpellEffIndex /*effIndex*/)
     if (effectHandleMode != SPELL_EFFECT_HANDLE_HIT_TARGET)
         return;
 
+    Unit* unitCaster = GetUnitCasterForEffectHandlers();
+    if (!unitCaster)
+        return;
+
     if (!unitTarget || !unitTarget->IsAlive() || damage <= 0)
         return;
 
     if (unitTarget->HasUnitState(UNIT_STATE_ISOLATED))
     {
-        m_caster->SendSpellDamageImmune(unitTarget, GetSpellInfo()->Id);
+        unitCaster->SendSpellDamageImmune(unitTarget, GetSpellInfo()->Id);
         return;
     }
 
@@ -413,7 +417,7 @@ void Spell::EffectAscensionRestoreBaseManaPct(SpellEffIndex /*effIndex*/)
         return;
 
     uint32 gain = CalculatePct(baseMana, damage);
-    m_caster->EnergizeBySpell(unitTarget, m_spellInfo->Id, gain, POWER_MANA);
+    unitCaster->EnergizeBySpell(unitTarget, m_spellInfo->Id, gain, POWER_MANA);
 }
 
 void Spell::EffectAscensionRefreshAura(SpellEffIndex effIndex)
@@ -421,7 +425,7 @@ void Spell::EffectAscensionRefreshAura(SpellEffIndex effIndex)
     if (effectHandleMode != SPELL_EFFECT_HANDLE_HIT_TARGET)
         return;
 
-    Unit* target = unitTarget ? unitTarget : m_caster;
+    Unit* target = unitTarget ? unitTarget : m_caster->ToUnit();
     SpellEffectInfo const& effect = m_spellInfo->Effects[effIndex];
     if (!target || !effect.MiscValue)
         return;
@@ -455,9 +459,13 @@ void Spell::EffectAscensionModifyAuraStacks(SpellEffIndex effIndex)
     if (effectHandleMode != SPELL_EFFECT_HANDLE_HIT_TARGET)
         return;
 
-    Unit* target = unitTarget ? unitTarget : m_caster;
+    Unit* unitCaster = GetUnitCasterForEffectHandlers();
+    if (!unitCaster)
+        return;
+
+    Unit* target = unitTarget ? unitTarget : unitCaster;
     SpellEffectInfo const& effect = m_spellInfo->Effects[effIndex];
-    ModifyAscensionAuraStacks(m_caster, target, effect.TriggerSpell, effect.MiscValue);
+    ModifyAscensionAuraStacks(unitCaster, target, effect.TriggerSpell, effect.MiscValue);
 }
 
 void Spell::EffectAscensionModifyAuraStacksBySpell(SpellEffIndex effIndex)
@@ -465,9 +473,13 @@ void Spell::EffectAscensionModifyAuraStacksBySpell(SpellEffIndex effIndex)
     if (effectHandleMode != SPELL_EFFECT_HANDLE_HIT_TARGET)
         return;
 
-    Unit* target = unitTarget ? unitTarget : m_caster;
+    Unit* unitCaster = GetUnitCasterForEffectHandlers();
+    if (!unitCaster)
+        return;
+
+    Unit* target = unitTarget ? unitTarget : unitCaster;
     SpellEffectInfo const& effect = m_spellInfo->Effects[effIndex];
-    ModifyAscensionAuraStacks(m_caster, target, effect.MiscValue, damage);
+    ModifyAscensionAuraStacks(unitCaster, target, effect.MiscValue, damage);
 }
 
 void Spell::EffectAscensionModifyAuraDuration(SpellEffIndex effIndex)
@@ -475,7 +487,7 @@ void Spell::EffectAscensionModifyAuraDuration(SpellEffIndex effIndex)
     if (effectHandleMode != SPELL_EFFECT_HANDLE_HIT_TARGET)
         return;
 
-    Unit* target = unitTarget ? unitTarget : m_caster;
+    Unit* target = unitTarget ? unitTarget : m_caster->ToUnit();
     SpellEffectInfo const& effect = m_spellInfo->Effects[effIndex];
     if (!target || !effect.MiscValue)
         return;
@@ -531,13 +543,17 @@ void Spell::EffectAscensionTriggerSpellDelayed(SpellEffIndex effIndex)
         target = m_targets.GetUnitTarget();
     }
 
+    Unit* unitCaster = GetUnitCasterForEffectHandlers();
+    if (!unitCaster)
+        return;
+
     if (!target)
-        target = m_caster;
+        target = unitCaster;
 
     ObjectGuid targetGuid = target->GetGUID();
     uint32 triggeredSpellId = triggeredSpell->Id;
     Milliseconds delay(std::max<int32>(1, damage));
-    Unit* caster = m_caster;
+    Unit* caster = unitCaster;
     caster->m_Events.AddEventAtOffset(
         [caster, targetGuid, triggeredSpellId]()
         {
@@ -552,7 +568,7 @@ void Spell::EffectAscensionResetCooldown(SpellEffIndex effIndex)
     if (effectHandleMode != SPELL_EFFECT_HANDLE_HIT_TARGET)
         return;
 
-    Unit* target = unitTarget ? unitTarget : m_caster;
+    Unit* target = unitTarget ? unitTarget : m_caster->ToUnit();
     Player* player = target ? target->ToPlayer() : nullptr;
     SpellEffectInfo const& effect = m_spellInfo->Effects[effIndex];
     ResetAscensionCooldown(player, effect.MiscValue, effect.MiscValueB != 0);
@@ -563,7 +579,7 @@ void Spell::EffectAscensionRestoreSpellCharges(SpellEffIndex effIndex)
     if (effectHandleMode != SPELL_EFFECT_HANDLE_HIT_TARGET || damage <= 0)
         return;
 
-    Unit* target = unitTarget ? unitTarget : m_caster;
+    Unit* target = unitTarget ? unitTarget : m_caster->ToUnit();
     if (Player* player = target ? target->ToPlayer() : nullptr)
         if (m_spellInfo->Effects[effIndex].MiscValue > 0)
             player->RestoreSpellChargeCategory(uint32(m_spellInfo->Effects[effIndex].MiscValue), uint32(damage));

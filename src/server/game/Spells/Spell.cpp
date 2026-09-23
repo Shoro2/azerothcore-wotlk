@@ -3707,7 +3707,7 @@ SpellCastResult Spell::prepare(SpellCastTargets const* targets, AuraEffect const
         !unitCaster->HasManastormMovementGrace() && !unitCaster->CanCastSpellWhileMoving(m_spellInfo))
     {
         // Custom: skip movement interrupt if caster has "Cast While Moving" aura (901100)
-        if (!m_caster->HasAura(901100))
+        if (!unitCaster->HasAura(901100))
         {
             // 1. Has casttime, 2. Or doesn't have flag to allow action during channel
             if (m_casttime || !m_spellInfo->IsActionAllowedChannel())
@@ -3790,8 +3790,8 @@ SpellCastResult Spell::prepare(SpellCastTargets const* targets, AuraEffect const
     //TODO:Apply this to all casted spells if needed
     // Why check duration? 29350: channelled triggers channelled
     if ((HasTriggeredCastFlag(TRIGGERED_CAST_DIRECTLY) && (!m_spellInfo->IsChanneled() || !m_spellInfo->GetMaxDuration())) ||
-        (m_caster->IsPlayer() && m_caster->getClass() == CLASS_NECROMANCER && m_spellInfo->Id == 500991) ||
-        (m_caster->IsPlayer() && m_caster->getClass() == CLASS_STARCALLER && m_spellInfo->Id == 800386))
+        (unitCaster && unitCaster->IsPlayer() && unitCaster->getClass() == CLASS_NECROMANCER && m_spellInfo->Id == 500991) ||
+        (unitCaster && unitCaster->IsPlayer() && unitCaster->getClass() == CLASS_STARCALLER && m_spellInfo->Id == 800386))
     {
         // SPELL_ATTR4_ALLOW_CAST_WHILE_CASTING adds TRIGGERED_CAST_DIRECTLY to ordinary player
         // casts, which sends them down this branch and past the global cooldown their own
@@ -4117,7 +4117,8 @@ void Spell::_cast(bool skipCheck)
 
     PrepareScriptHitHandlers();
 
-    sScriptMgr->OnSpellBeforeEffects(this, m_caster, m_spellInfo);
+    if (unitCaster)
+        sScriptMgr->OnSpellBeforeEffects(this, unitCaster, m_spellInfo);
 
     HandleLaunchPhase();
 
@@ -4602,7 +4603,7 @@ void Spell::update(uint32 difftime)
             (m_spellInfo->Effects[0].Effect != SPELL_EFFECT_STUCK || !unitCaster->HasUnitMovementFlag(MOVEMENTFLAG_FALLING_FAR)))
     {
         // Custom: skip movement interrupt if caster has "Cast While Moving" aura (901100)
-        if (!m_caster->HasAura(901100))
+        if (!unitCaster->HasAura(901100))
         {
             // don't cancel for melee, autorepeat, triggered and instant spells
             if (!IsNextMeleeSwingSpell() && !IsAutoRepeat() && !IsTriggered())
@@ -5166,7 +5167,7 @@ void Spell::WriteAmmoToPacket(WorldPacket* data)
                      pItem->GetTemplate()->SubClass == ITEM_SUBCLASS_WEAPON_CROSSBOW))) // Requires No Ammo
                 {
                     ammoDisplayID = 5996;                   // normal arrow
-                    if (IsAscensionClass(m_caster->getClass()) && pItem->GetTemplate()->SubClass == ITEM_SUBCLASS_WEAPON_GUN)
+                    if (IsAscensionClass(unitCaster->getClass()) && pItem->GetTemplate()->SubClass == ITEM_SUBCLASS_WEAPON_GUN)
                         ammoDisplayID = 5998;               // classes >= 12 fire the stock bullet from a gun
                     ammoInventoryType = INVTYPE_AMMO;
                 }
@@ -7002,7 +7003,7 @@ SpellCastResult Spell::CheckCast(bool strict, uint32* /*param1*/, uint32* /*para
                 }
             case SPELL_AURA_MOUNTED:
                 {
-                    if (m_caster->HasAura(300513))
+                    if (unitCaster && unitCaster->HasAura(300513))
                         return SPELL_FAILED_CASTER_AURASTATE;
                     // Disallow casting flying mounts in water
                     if (unitCaster && unitCaster->IsInWater() && m_spellInfo->HasAura(SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED))
@@ -8039,7 +8040,7 @@ SpellCastResult Spell::CheckItems(uint32* param1, uint32* param2)
 
                     // Keep the real ranged-weapon/broken-item checks above.
                     // Custom classes do not require or consume projectile stacks.
-                    if (IsAscensionClass(m_caster->getClass()))
+                    if (IsAscensionClass(unitCaster->getClass()))
                         break;
 
                     switch (pItem->GetTemplate()->SubClass)

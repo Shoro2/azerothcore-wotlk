@@ -506,7 +506,7 @@ int32 SpellEffectInfo::CalcValue(WorldObject const* caster, int32 const* bp, Uni
     // random damage
     if (casterUnit)
     {
-        sScriptMgr->ModifySpellEffectBaseValue(caster, _spellInfo, EffectIndex, value);
+        sScriptMgr->ModifySpellEffectBaseValue(casterUnit, _spellInfo, EffectIndex, value);
 
         // bonus amount from combo points
         if (uint8 comboPoints = casterUnit->GetComboPoints())

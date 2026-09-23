@@ -4680,6 +4680,12 @@ bool Unit::CanCastDuringChannel(SpellInfo const* info) const
         (info->SpellFamilyFlags[1] & 3) && channel && channel->getState() != SPELL_STATE_FINISHED &&
         channel->IsChannelActive() && channel->GetSpellInfo()->Id == 800355)
         return true;
+    if (IsPlayer() && getClass() == CLASS_STORMBRINGER && info && info->SpellFamilyName == 22 &&
+        (info->SpellFamilyFlags[0] & 33554432) && (info->SpellFamilyFlags[2] & 32) && HasAura(578300) &&
+        channel && channel->getState() != SPELL_STATE_FINISHED && channel->IsChannelActive() &&
+        channel->GetSpellInfo()->SpellFamilyName == 22 &&
+        (channel->GetSpellInfo()->SpellFamilyFlags[1] & 65536))
+        return true;
     return getClass() == CLASS_WITCH_DOCTOR && info && info->SpellFamilyName == 19 &&
         ((info->SpellFamilyFlags[1] & 2048) || (info->SpellFamilyFlags[2] & 536870913)) &&
         channel && channel->getState() != SPELL_STATE_FINISHED && channel->IsChannelActive() &&
@@ -5774,7 +5780,7 @@ bool Unit::HasManastormMovementGrace() const
     return false;
 }
 
-void Unit::RemoveAurasWithInterruptFlags(uint32 flag, uint32 except, bool isAutoshot /*= false*/)
+void Unit::RemoveAurasWithInterruptFlags(uint32 flag, uint32 except, bool isAutoshot /*= false*/, SpellInfo const* bySpell /*= nullptr*/)
 {
     if (!(m_interruptMask & flag))
         return;
@@ -5804,7 +5810,8 @@ void Unit::RemoveAurasWithInterruptFlags(uint32 flag, uint32 except, bool isAuto
     {
         uint32 const channelFlags = HasManastormMovementGrace() || CanCastSpellWhileMoving(spell->GetSpellInfo())
             ? flag & ~(AURA_INTERRUPT_FLAG_MOVE | AURA_INTERRUPT_FLAG_TURNING) : flag;
-        if (spell->getState() == SPELL_STATE_CASTING && (spell->m_spellInfo->ChannelInterruptFlags & channelFlags) && spell->m_spellInfo->Id != except)
+        if (spell->getState() == SPELL_STATE_CASTING && (spell->m_spellInfo->ChannelInterruptFlags & channelFlags) && spell->m_spellInfo->Id != except &&
+            !(bySpell && CanCastDuringChannel(bySpell)))
         {
             // Do not interrupt if auto shot
             if (!(isAutoshot && spell->m_spellInfo->HasAttribute(SPELL_ATTR2_DO_NOT_RESET_COMBAT_TIMERS)))

@@ -412,6 +412,9 @@ namespace lfg
         if (!sLFGMgr->AllQueued(check)) // can't create proposal
             return LFG_COMPATIBILITY_PENDING;
 
+        if (!sScriptMgr->CanCreateLfgProposal(proposal.queues))
+            return LFG_INCOMPATIBLES_REJECTED_BY_SCRIPT;
+
         if (!sScriptMgr->OnPlayerbotCheckLFGQueue(proposal.queues))
         {
             return LFG_INCOMPATIBLES_HAS_IGNORES;

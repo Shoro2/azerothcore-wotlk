@@ -32,6 +32,7 @@ enum ServerHook
     SERVERHOOK_CAN_PACKET_SEND,
     SERVERHOOK_CAN_PACKET_RECEIVE_EARLY,
     SERVERHOOK_CAN_PACKET_RECEIVE,
+    SERVERHOOK_ON_PACKET_SENT,
     SERVERHOOK_END
 };
 
@@ -90,6 +91,16 @@ public:
     [[nodiscard]] virtual bool CanPacketReceive(WorldSession* /*session*/, WorldPacket const& /*packet*/) { return true; }
 
     virtual void OnPacketReceived(WorldSession* /*session*/, WorldPacket const& /*packet*/) { }
+
+    /**
+     * @brief Called for every packet queued for sending to a session, before the socket check.
+     * Unlike CanPacketSend this also fires for sessions without a socket, so a module driving
+     * a client-less session can observe what the server would have sent to it.
+     *
+     * @param session Contains information about the WorldSession
+     * @param packet Contains information about the WorldPacket
+     */
+    virtual void OnPacketSent(WorldSession* /*session*/, WorldPacket const& /*packet*/) { }
 };
 
 #endif

@@ -45,6 +45,7 @@ enum AllSpellHook
     ALLSPELLHOOK_ON_CRIT_CHANCE,
     ALLSPELLHOOK_ON_INTERRUPT_DURATION,
     ALLSPELLHOOK_ON_SUCCESSFUL_DISPEL,
+    ALLSPELLHOOK_ON_IS_AURA_EXCLUSIVE_BY_SPECIFIC_WITH,
     ALLSPELLHOOK_END
 };
 
@@ -75,6 +76,8 @@ public:
     virtual void OnRemoveAuraScaleTargets(Spell* /*spell*/, TargetInfo& /*targetInfo*/, uint8 /*auraScaleMask*/, bool& /*needErase*/) { }
 
     virtual void OnBeforeAuraRankForLevel(SpellInfo const* /*spellInfo*/, SpellInfo const* /*latestSpellInfo*/, uint8 /*level*/) { }
+
+    virtual void OnIsAuraExclusiveBySpecificWith(SpellInfo const* /*spellInfo*/, SpellInfo const* /*otherSpellInfo*/, bool& /*isExclusive*/) { }
 
     /**
      * @brief This hook called after spell dummy effect

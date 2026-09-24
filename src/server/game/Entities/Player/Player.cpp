@@ -3266,12 +3266,26 @@ bool Player::addSpell(uint32 spellId, uint8 addSpecMask, bool updateActive, bool
             {
                 if (nextSpellInfo->GetRank() < spellInfo->GetRank())
                 {
+                    // Forgotten Land: while the lower rank stands replaced (SetTemporarySpellReplacement) the client
+                    // shows the replacement in its place. Superseding the lower rank there would append the new rank
+                    // beside the replacement, and turning the replacement back later would restore - and point the
+                    // player's buttons at - the rank the player no longer uses. Hand the replacement on to the new
+                    // rank instead and tell the client nothing: its book and buttons already show the replacement.
+                    auto const replaced = m_temporarySpellReplacements.find(nextSpellInfo->Id);
+                    bool const handOn = replaced != m_temporarySpellReplacements.end() && HasActiveSpell(replaced->second);
+                    if (handOn)
+                    {
+                        uint32 const replacement = replaced->second;
+                        m_temporarySpellReplacements.erase(replaced);
+                        m_temporarySpellReplacements[spellInfo->Id] = replacement;
+                    }
+
                     itr->second->Active = false;
 
                     if (!isBeingLoaded() && IsUnlearnNeededForSpell(spellId))
                         SendUnlearnSpells();
 
-                    if (IsInWorld())
+                    if (IsInWorld() && !handOn)
                     {
                         WorldPacket data(SMSG_SUPERCEDED_SPELL, 4 + 4);
                         data << uint32(nextSpellInfo->Id);

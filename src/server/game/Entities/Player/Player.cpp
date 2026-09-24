@@ -3220,9 +3220,33 @@ void Player::SendLearnPacket(uint32 spellId, bool learn)
     }
 }
 
+// Forgotten Land: whether Player::addSpell's rank pass (below) will act when it runs for spellInfo - that is,
+// whether the player holds another rank of spellInfo's chain that is not removed and still active. The pass
+// then either supersedes that rank with spellInfo (SMSG_SUPERCEDED_SPELL) or files spellInfo inactive (no
+// packet). The loop and the tests are the pass's own; Player::_addSpell only changes the entry of spellInfo
+// itself, so asking before the entry is written gives the pass's answer.
+static bool RankPassWillAct(PlayerSpellMap const& spells, SpellInfo const* spellInfo)
+{
+    if (spellInfo->IsStackableWithRanks() || !spellInfo->IsRanked())
+        return false;
+
+    for (SpellInfo const* rankInfo = sSpellMgr->GetSpellInfo(sSpellMgr->GetFirstSpellInChain(spellInfo->Id)); rankInfo;
+         rankInfo = rankInfo->GetNextRankSpell())
+    {
+        if (rankInfo->GetRank() == spellInfo->GetRank())
+            continue;
+
+        PlayerSpellMap::const_iterator itr = spells.find(rankInfo->Id);
+        if (itr != spells.end() && itr->second->State != PLAYERSPELL_REMOVED && itr->second->Active)
+            return true;
+    }
+
+    return false;
+}
+
 bool Player::addSpell(uint32 spellId, uint8 addSpecMask, bool updateActive, bool temporary /*= false*/, bool learnFromSkill /*= false*/)
 {
-    if (!_addSpell(spellId, addSpecMask, temporary, learnFromSkill))
+    if (!_addSpell(spellId, addSpecMask, temporary, learnFromSkill, updateActive))
         return false;
 
     if (!updateActive)
@@ -3312,7 +3336,7 @@ bool Player::CheckSkillLearnedBySpell(uint32 spellId)
     return true;
 }
 
-bool Player::_addSpell(uint32 spellId, uint8 addSpecMask, bool temporary, bool learnFromSkill /*= false*/)
+bool Player::_addSpell(uint32 spellId, uint8 addSpecMask, bool temporary, bool learnFromSkill /*= false*/, bool updateActive /*= false*/)
 {
     // pussywizard: this can be called to OVERWRITE currently existing spell params! usually to set active = false for lower ranks of a spell
 
@@ -3331,7 +3355,14 @@ bool Player::_addSpell(uint32 spellId, uint8 addSpecMask, bool temporary, bool l
     // This site owns the announcement for a temporary learn that did not come from a skill line, and its
     // condition mirrors the one Player::removeSpell uses for onlyTemporary. Player::learnSpell must not
     // announce the same grant again, or the client ends up with more copies than the server ever removes.
-    if (IsInWorld() && !isBeingLoaded() && temporary && !learnFromSkill && (!spellInfo->HasAttribute(SpellAttr0(SPELL_ATTR0_PASSIVE | SPELL_ATTR0_DO_NOT_DISPLAY)) || !spellInfo->HasAnyAura()) && !spellInfo->HasEffect(SPELL_EFFECT_LEARN_SPELL))
+    // Forgotten Land: it also stays quiet when Player::addSpell's rank pass is about to act (updateActive and
+    // another active rank of the chain, RankPassWillAct): that pass announces a higher rank itself with
+    // SMSG_SUPERCEDED_SPELL(lower, new) - a second SMSG_LEARNED_SPELL here made a 3.3.5a client append the
+    // new rank twice - and it files a lower rank inactive, which the client must not show at all. Those are
+    // exactly the two cases in which a non-temporary learn is not announced either (Player::learnSpell sends
+    // its packet only when addSpell returns true); every other temporary learn is announced as before.
+    if (IsInWorld() && !isBeingLoaded() && temporary && !learnFromSkill && (!spellInfo->HasAttribute(SpellAttr0(SPELL_ATTR0_PASSIVE | SPELL_ATTR0_DO_NOT_DISPLAY)) || !spellInfo->HasAnyAura()) && !spellInfo->HasEffect(SPELL_EFFECT_LEARN_SPELL) &&
+        !(updateActive && RankPassWillAct(m_spells, spellInfo)))
         SendLearnPacket(spellInfo->Id, true);
 
     // xinef: DO NOT allow to learn spell with effect learn spell!

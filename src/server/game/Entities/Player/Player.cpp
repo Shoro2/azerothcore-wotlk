@@ -3205,8 +3205,21 @@ void Player::_addTalentAurasAndSpells(uint32 spellId)
 
 void Player::SendLearnPacket(uint32 spellId, bool learn)
 {
+    // Forgotten Land: a 3.3.5a client rewrites action buttons on both packets and reports each button it changes
+    // back with CMSG_SET_ACTION_BUTTON (ForgottenLand.exe): SMSG_LEARNED_SPELL points every button of the spell's
+    // previous rank at the spell (0x006E7B00 -> 0x005AAFD0), SMSG_REMOVED_SPELL clears every button of the spell
+    // (0x006E71D0 -> 0x005AAB90). A button that shows a replacement on the action bar only holds that replacement
+    // in the client, so the rewrite would take it along and the report would save the result on the original's
+    // button. Take every such swap the spell is part of off the bar first; a new rank of a swapped original carries
+    // the swap on instead, and its buttons move to the new rank on the server as the client would have moved them.
     if (learn)
     {
+        if (uint32 const previous = sSpellMgr->GetPrevSpellInChain(spellId))
+        {
+            EndTemporarySpellReplacementsOnBar(previous, false);
+            HandOnTemporarySpellReplacementOnBar(previous, spellId, true);
+        }
+
         WorldPacket data(SMSG_LEARNED_SPELL, 6);
         data << uint32(spellId);
         data << uint16(0);
@@ -3214,6 +3227,8 @@ void Player::SendLearnPacket(uint32 spellId, bool learn)
     }
     else
     {
+        EndTemporarySpellReplacementsOnBar(spellId, true);
+
         WorldPacket data(SMSG_REMOVED_SPELL, 4);
         data << uint32(spellId);
         SendDirectMessage(&data);
@@ -3271,14 +3286,23 @@ bool Player::addSpell(uint32 spellId, uint8 addSpecMask, bool updateActive, bool
                     // beside the replacement, and turning the replacement back later would restore - and point the
                     // player's buttons at - the rank the player no longer uses. Hand the replacement on to the new
                     // rank instead and tell the client nothing: its book and buttons already show the replacement.
+                    // A replacement shown on the action bar only is different: the book still lists the lower rank,
+                    // so the supersede below goes out as for any rank, while the buttons of the lower rank - they
+                    // show the replacement in the client, which leaves them alone - move to the new rank on the
+                    // server and carry the swap along. A lower rank that a swap shows on others' buttons is taken
+                    // off the bar first: the supersede would point those buttons at the new rank as well.
+                    bool const onBar = m_temporarySpellReplacementsOnBar.count(nextSpellInfo->Id) != 0;
                     auto const replaced = m_temporarySpellReplacements.find(nextSpellInfo->Id);
-                    bool const handOn = replaced != m_temporarySpellReplacements.end() && HasActiveSpell(replaced->second);
+                    bool const handOn = !onBar && replaced != m_temporarySpellReplacements.end() &&
+                        HasActiveSpell(replaced->second);
                     if (handOn)
                     {
                         uint32 const replacement = replaced->second;
                         m_temporarySpellReplacements.erase(replaced);
                         m_temporarySpellReplacements[spellInfo->Id] = replacement;
                     }
+                    EndTemporarySpellReplacementsOnBar(nextSpellInfo->Id, false);
+                    HandOnTemporarySpellReplacementOnBar(nextSpellInfo->Id, spellInfo->Id, false);
 
                     itr->second->Active = false;
 
@@ -5891,14 +5915,27 @@ void Player::SendActionButtons(uint32 state) const
         {
             ActionButtonList::const_iterator itr = m_actionButtons.find(button);
             if (itr != m_actionButtons.end() && itr->second.uState != ACTIONBUTTON_DELETED)
-                data << uint32(itr->second.packedData);
+                data << uint32(GetShownActionButtonData(itr->second)); // Forgotten Land: swaps on the bar drawn in
             else
                 data << uint32(0);
         }
     }
 
+    m_actionButtonsCleared = state == 2;
     SendDirectMessage(&data);
     LOG_DEBUG("entities.player", "Action Buttons for {} spec {} Sent", GetGUID().ToString(), m_activeSpec);
+}
+
+// Forgotten Land: the button as the client is to show it. A replacement shown on the action bar only
+// (SetTemporarySpellReplacement) is drawn on every button of its original while it lives; the button itself keeps
+// the original, which is what is saved.
+uint32 Player::GetShownActionButtonData(ActionButton const& button) const
+{
+    if (button.GetType() != ACTION_BUTTON_SPELL || !m_temporarySpellReplacementsOnBar.count(button.GetAction()))
+        return button.packedData;
+
+    uint32 const shown = GetTemporarySpellReplacement(button.GetAction());
+    return shown | (uint32(ACTION_BUTTON_SPELL) << 24);
 }
 
 bool Player::IsActionButtonDataValid(uint8 button, uint32 action, uint8 type)
@@ -13830,10 +13867,13 @@ bool Player::CanTitanGrip(ItemTemplate const* weapon) const
 void Player::SetTemporarySpellReplacement(uint32 original, uint32 replacement)
 {
     auto itr = m_temporarySpellReplacements.find(original);
-    uint32 previous = itr == m_temporarySpellReplacements.end() ? original : itr->second;
+    uint32 const previous = itr == m_temporarySpellReplacements.end() ? original : itr->second;
+    bool const previousOnBar = m_temporarySpellReplacementsOnBar.count(original) != 0;
+    bool onBar = false;
     if (!replacement)
     {
         m_temporarySpellReplacements.erase(original);
+        m_temporarySpellReplacementsOnBar.erase(original);
         replacement = original;
     }
     else
@@ -13842,21 +13882,17 @@ void Player::SetTemporarySpellReplacement(uint32 original, uint32 replacement)
             return;
 
         // Forgotten Land: SMSG_SUPERCEDED_SPELL(old, new) makes a 3.3.5a client drop the first spellbook entry
-        // of `old`, append `new` without looking for one already there, and point every action button of
-        // `old` at `new` (ForgottenLand.exe 0x006E7E00 -> 0x005AAFD0, 0x00542EB0). So it is only safe while
-        // `new` is not listed yet and `old` is. Three states break that, and each gets no replacement - the
-        // original keeps casting itself, as when the replacement is not an active spell:
-        //  - the player owns `replacement` as a spell of its own (not a temporary grant): the book lists it
-        //    already, and turning the replacement back later would rewrite the player's own buttons of it;
-        //  - a live replacement of another spell already shows `replacement` in the book. Ranks of one chain
-        //    may share it: a spell stackable with ranks keeps every rank active, and every rank's button is
-        //    meant to turn into the replacement;
+        // of `old` (a second one too, if it has two), append `new` without looking for one already there, and
+        // point every action button of `old` at `new`, reporting each button back with CMSG_SET_ACTION_BUTTON so
+        // that the server saves it (ForgottenLand.exe 0x006E7E00 -> 0x005AAFD0, 0x00542EB0, 0x006E71D0). So it
+        // is only safe while `new` is not listed yet and `old` is. Two states break that, and each gets no
+        // replacement - the original keeps casting itself, as when the replacement is not an active spell:
+        //  - a live replacement of another spell already shows `replacement`. Ranks of one chain may share it:
+        //    a spell stackable with ranks keeps every rank active, and every rank's button is meant to turn
+        //    into the replacement;
         //  - `original` is itself standing in for another spell, so the book shows it only in that slot.
         // A temporary grant that was announced is the module's to prevent (mod-ascension-compat
         // tools/check_replacement_learns.py).
-        PlayerSpellMap::const_iterator own = m_spells.find(replacement);
-        if (own != m_spells.end() && own->second->State != PLAYERSPELL_TEMPORARY)
-            return;
         uint32 const chain = sSpellMgr->GetFirstSpellInChain(original);
         for (auto const& [otherOriginal, otherReplacement] : m_temporarySpellReplacements)
             if (otherOriginal != original && HasActiveSpell(otherOriginal) && HasActiveSpell(otherReplacement) &&
@@ -13864,14 +13900,39 @@ void Player::SetTemporarySpellReplacement(uint32 original, uint32 replacement)
                  otherReplacement == original))
                 return;
 
+        // A target the player owns as a spell of its own (not a temporary grant) is one the client lists and
+        // knows already: a supersede would list it twice, and turning it back would point every button of the
+        // player's own copy at the original. That replacement is a swap on the action bar only - the book stays
+        // as it is, SMSG_ACTION_BUTTONS draws the target on the buttons of the original, and the client reports
+        // nothing back for that packet (0x006D8750 -> 0x005AAE80(button, action, 0, 1)), so the saved bar keeps
+        // the original. Such a target may not stand replaced itself: its buttons would show one spell and cast
+        // another.
+        PlayerSpellMap::const_iterator own = m_spells.find(replacement);
+        onBar = own != m_spells.end() && own->second->State != PLAYERSPELL_TEMPORARY;
+        if (onBar && GetTemporarySpellReplacement(replacement) != replacement)
+            return;
+
         m_temporarySpellReplacements[original] = replacement;
+        if (onBar)
+            m_temporarySpellReplacementsOnBar.insert(original);
+        else
+            m_temporarySpellReplacementsOnBar.erase(original);
     }
-    if (previous != replacement && IsInWorld())
-    {
-        WorldPacket packet(SMSG_SUPERCEDED_SPELL, 8);
-        packet << previous << replacement;
-        GetSession()->SendPacket(&packet);
-    }
+
+    if (!IsInWorld() || (previous == replacement && previousOnBar == onBar))
+        return;
+
+    // What the book and the original's buttons show now - `previous` only if a supersede put it there - and what
+    // they are to show: the replacement only for a supersede. A swap leaves the bar before a supersede reaches the
+    // original's buttons, and is drawn onto them after a supersede has turned them back.
+    uint32 const shown = previousOnBar ? original : previous;
+    uint32 const wanted = onBar ? original : replacement;
+    if (previousOnBar && shown != wanted)
+        SendTemporarySpellReplacementBar(original);
+    if (shown != wanted)
+        SendTemporarySpellReplacementSupersede(shown, wanted);
+    if (onBar || (previousOnBar && shown == wanted))
+        SendTemporarySpellReplacementBar(original);
 }
 
 uint32 Player::GetTemporarySpellReplacement(uint32 original) const
@@ -13879,6 +13940,103 @@ uint32 Player::GetTemporarySpellReplacement(uint32 original) const
     auto itr = m_temporarySpellReplacements.find(original);
     return itr != m_temporarySpellReplacements.end() && HasActiveSpell(original) && HasActiveSpell(itr->second) ?
         itr->second : original;
+}
+
+// Forgotten Land: announce a supersede of what the book and the buttons show in an original's place. The client
+// points every button of `shown` at `replacement` and reports each back (CMSG_SET_ACTION_BUTTON); do the same to the
+// server's buttons at once, so that a bar drawn before those reports arrive names `replacement` already - the client
+// knows `shown` no more, and would clear a button that still names it and report that as well.
+void Player::SendTemporarySpellReplacementSupersede(uint32 shown, uint32 replacement)
+{
+    WorldPacket packet(SMSG_SUPERCEDED_SPELL, 8);
+    packet << shown << replacement;
+    GetSession()->SendPacket(&packet);
+
+    for (auto& entry : m_actionButtons)
+        if (entry.second.uState != ACTIONBUTTON_DELETED && entry.second.GetType() == ACTION_BUTTON_SPELL &&
+            entry.second.GetAction() == shown)
+            entry.second.SetActionAndType(replacement, ACTION_BUTTON_SPELL);
+}
+
+// Forgotten Land: redraw the action bar with every live swap (GetShownActionButtonData) when a button of `original`
+// is on it - a swap changes no other button - except between a state-2 and a state-1 SMSG_ACTION_BUTTONS (a
+// specialization switch), where the client ignores button writes and a state-1 packet here would end its clearing
+// early; the switch's own state-1 packet draws the swaps.
+void Player::SendTemporarySpellReplacementBar(uint32 original)
+{
+    if (IsInWorld() && !m_actionButtonsCleared && HasSpellActionButton(original))
+        SendActionButtons(1);
+}
+
+bool Player::HasSpellActionButton(uint32 spellId) const
+{
+    for (auto const& entry : m_actionButtons)
+        if (entry.second.uState != ACTIONBUTTON_DELETED && entry.second.GetType() == ACTION_BUTTON_SPELL &&
+            entry.second.GetAction() == spellId)
+            return true;
+    return false;
+}
+
+// Forgotten Land: take every replacement shown on the action bar only whose target is `spellId` - or, with
+// alsoAsOriginal, whose original is - off the bar, before the client hears a packet that rewrites or clears the
+// buttons of that spell by itself (SendLearnPacket, the rank pass of Player::addSpell). The swapped buttons hold the
+// target in the client; the rewrite would take them along and report the result, and the server would save the
+// target - or nothing - on a button of the original.
+void Player::EndTemporarySpellReplacementsOnBar(uint32 spellId, bool alsoAsOriginal)
+{
+    std::vector<uint32> ended;
+    for (auto it = m_temporarySpellReplacementsOnBar.begin(); it != m_temporarySpellReplacementsOnBar.end();)
+    {
+        auto const mapped = m_temporarySpellReplacements.find(*it);
+        bool const involved = (alsoAsOriginal && *it == spellId) ||
+            (mapped != m_temporarySpellReplacements.end() && mapped->second == spellId);
+        if (!involved)
+        {
+            ++it;
+            continue;
+        }
+
+        if (mapped != m_temporarySpellReplacements.end())
+            m_temporarySpellReplacements.erase(mapped);
+        ended.push_back(*it);
+        it = m_temporarySpellReplacementsOnBar.erase(it);
+    }
+
+    // one redraw takes every ended swap off
+    for (uint32 original : ended)
+        if (HasSpellActionButton(original))
+        {
+            SendTemporarySpellReplacementBar(original);
+            break;
+        }
+}
+
+// Forgotten Land: `next` is a new rank of `previous`, the original of a live replacement shown on the action bar
+// only. The client leaves the swapped buttons alone - they show the replacement - where it would have pointed them
+// at the new rank (SMSG_LEARNED_SPELL and SMSG_SUPERCEDED_SPELL of a rank, 0x005AAFD0), so do that to the server's
+// buttons, and let `next` carry the swap: beside `previous` while that stays active (a spell stackable with ranks),
+// alone when it does not (keepPrevious false, the rank pass of Player::addSpell).
+void Player::HandOnTemporarySpellReplacementOnBar(uint32 previous, uint32 next, bool keepPrevious)
+{
+    if (!m_temporarySpellReplacementsOnBar.count(previous))
+        return;
+
+    uint32 const replacement = GetTemporarySpellReplacement(previous);
+    if (replacement == previous || !HasActiveSpell(next))
+        return;
+
+    m_temporarySpellReplacements[next] = replacement;
+    m_temporarySpellReplacementsOnBar.insert(next);
+    if (!keepPrevious)
+    {
+        m_temporarySpellReplacements.erase(previous);
+        m_temporarySpellReplacementsOnBar.erase(previous);
+    }
+
+    for (auto& entry : m_actionButtons)
+        if (entry.second.uState != ACTIONBUTTON_DELETED && entry.second.GetType() == ACTION_BUTTON_SPELL &&
+            entry.second.GetAction() == previous)
+            entry.second.SetActionAndType(next, ACTION_BUTTON_SPELL);
 }
 
 bool Player::CanUseTwoHandWithShield(ItemTemplate const* main, ItemTemplate const* off) const

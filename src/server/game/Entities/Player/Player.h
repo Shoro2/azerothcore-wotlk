@@ -2940,6 +2940,18 @@ protected:
     PlayerMails m_mail;
     PlayerSpellMap m_spells;
     std::map<uint32, uint32> m_temporarySpellReplacements;
+    // Forgotten Land: the originals whose replacement the client is shown on its action bar only. SendActionButtons
+    // draws the replacement on their buttons; m_actionButtons keeps the original, so no part of the swap is saved.
+    std::set<uint32> m_temporarySpellReplacementsOnBar;
+    // Forgotten Land: the last SMSG_ACTION_BUTTONS was state 2, after which the client ignores every button write
+    // until the next state-1 packet (ForgottenLand.exe 0x006D8750, Player_C +0x1954).
+    mutable bool m_actionButtonsCleared{false};
+    void SendTemporarySpellReplacementSupersede(uint32 shown, uint32 replacement);
+    void SendTemporarySpellReplacementBar(uint32 original);
+    [[nodiscard]] bool HasSpellActionButton(uint32 spellId) const;
+    void EndTemporarySpellReplacementsOnBar(uint32 spellId, bool alsoAsOriginal);
+    void HandOnTemporarySpellReplacementOnBar(uint32 previous, uint32 next, bool keepPrevious);
+    [[nodiscard]] uint32 GetShownActionButtonData(ActionButton const& button) const;
     PlayerTalentMap m_talents;
     uint32 m_lastPotionId;                              // last used health/mana potion in combat, that block next potion use
 

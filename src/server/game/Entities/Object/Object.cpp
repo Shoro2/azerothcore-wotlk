@@ -3991,6 +3991,11 @@ ReputationRank WorldObject::GetReactionTo(WorldObject const* target) const
 
 float WorldObject::GetSpellMaxRangeForTarget(Unit const* target, SpellInfo const* spellInfo) const
 {
+    // CoA core port: Unit's copy adds the Guardian polearm reach bonus. Unit hides this function,
+    // so a Unit caster reached through WorldObject* (Spell::m_caster) must be forwarded to it.
+    if (Unit const* unitSelf = ToUnit())
+        return unitSelf->GetSpellMaxRangeForTarget(target, spellInfo);
+
     if (!spellInfo->RangeEntry)
         return 0;
 
@@ -4005,6 +4010,11 @@ float WorldObject::GetSpellMaxRangeForTarget(Unit const* target, SpellInfo const
 
 float WorldObject::GetSpellMinRangeForTarget(Unit const* target, SpellInfo const* spellInfo) const
 {
+    // CoA core port: Unit's copy honours SPELL_AURA_ASCENSION_IGNORE_MIN_RANGE (IgnoresSpellMinRange);
+    // forwarded for the same reason as GetSpellMaxRangeForTarget above.
+    if (Unit const* unitSelf = ToUnit())
+        return unitSelf->GetSpellMinRangeForTarget(target, spellInfo);
+
     if (!spellInfo->RangeEntry)
         return 0;
 

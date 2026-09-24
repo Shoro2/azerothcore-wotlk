@@ -13826,6 +13826,30 @@ void Player::SetTemporarySpellReplacement(uint32 original, uint32 replacement)
     {
         if (!HasActiveSpell(original) || !HasActiveSpell(replacement))
             return;
+
+        // Forgotten Land: SMSG_SUPERCEDED_SPELL(old, new) makes a 3.3.5a client drop the first spellbook entry
+        // of `old`, append `new` without looking for one already there, and point every action button of
+        // `old` at `new` (ForgottenLand.exe 0x006E7E00 -> 0x005AAFD0, 0x00542EB0). So it is only safe while
+        // `new` is not listed yet and `old` is. Three states break that, and each gets no replacement - the
+        // original keeps casting itself, as when the replacement is not an active spell:
+        //  - the player owns `replacement` as a spell of its own (not a temporary grant): the book lists it
+        //    already, and turning the replacement back later would rewrite the player's own buttons of it;
+        //  - a live replacement of another spell already shows `replacement` in the book. Ranks of one chain
+        //    may share it: a spell stackable with ranks keeps every rank active, and every rank's button is
+        //    meant to turn into the replacement;
+        //  - `original` is itself standing in for another spell, so the book shows it only in that slot.
+        // A temporary grant that was announced is the module's to prevent (mod-ascension-compat
+        // tools/check_replacement_learns.py).
+        PlayerSpellMap::const_iterator own = m_spells.find(replacement);
+        if (own != m_spells.end() && own->second->State != PLAYERSPELL_TEMPORARY)
+            return;
+        uint32 const chain = sSpellMgr->GetFirstSpellInChain(original);
+        for (auto const& [otherOriginal, otherReplacement] : m_temporarySpellReplacements)
+            if (otherOriginal != original && HasActiveSpell(otherOriginal) && HasActiveSpell(otherReplacement) &&
+                ((otherReplacement == replacement && sSpellMgr->GetFirstSpellInChain(otherOriginal) != chain) ||
+                 otherReplacement == original))
+                return;
+
         m_temporarySpellReplacements[original] = replacement;
     }
     if (previous != replacement && IsInWorld())

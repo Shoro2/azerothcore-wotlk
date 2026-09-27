@@ -2952,6 +2952,11 @@ protected:
     void EndTemporarySpellReplacementsOnBar(uint32 spellId, bool alsoAsOriginal);
     void HandOnTemporarySpellReplacementOnBar(uint32 previous, uint32 next, bool keepPrevious);
     [[nodiscard]] uint32 GetShownActionButtonData(ActionButton const& button) const;
+    // Forgotten Land: the replacement a live supersede (not a swap on the action bar) shows in `original`'s place, or 0
+    [[nodiscard]] uint32 GetSupersedingSpell(uint32 original) const;
+    // Forgotten Land: the original in whose place a live supersede shows `replacement` - its highest rank if several
+    // do - or 0
+    [[nodiscard]] uint32 GetSupersededOriginal(uint32 replacement) const;
     PlayerTalentMap m_talents;
     uint32 m_lastPotionId;                              // last used health/mana potion in combat, that block next potion use
 

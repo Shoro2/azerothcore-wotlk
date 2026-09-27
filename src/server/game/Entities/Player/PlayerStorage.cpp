@@ -5843,13 +5843,25 @@ void Player::_LoadActions(PreparedQueryResult result)
 
             uint32 const originalAction = action;
             if (type == ACTION_BUTTON_SPELL)
+            {
                 sScriptMgr->OnPlayerNormalizeActionButtonSpell(this, action, true);
+                // Forgotten Land: the saved bar holds the original of a temporary replacement (_SaveActions). While a
+                // live supersede shows the replacement in its place - one an aura loaded before the bar set up - the
+                // client lists the replacement instead and would clear a button naming the original: the button
+                // holds the replacement, as it does in the game.
+                if (uint32 const shown = GetSupersedingSpell(action))
+                    action = shown;
+            }
 
             if (ActionButton* ab = addActionButton(button, action, type))
             {
                 uint32 persistenceAction = action;
                 if (type == ACTION_BUTTON_SPELL)
+                {
+                    if (uint32 const superseded = GetSupersededOriginal(persistenceAction))
+                        persistenceAction = superseded;
                     sScriptMgr->OnPlayerNormalizeActionButtonSpell(this, persistenceAction, false);
+                }
                 ab->uState = persistenceAction == originalAction ? ACTIONBUTTON_UNCHANGED : ACTIONBUTTON_CHANGED;
             }
             else
@@ -7374,7 +7386,17 @@ void Player::_SaveActions(CharacterDatabaseTransaction trans)
     {
         uint32 action = itr->second.GetAction();
         if (itr->second.GetType() == ACTION_BUTTON_SPELL)
+        {
+            // Forgotten Land: a button a live supersede (SetTemporarySpellReplacement) turned into the replacement - the
+            // client's report and the server's own rewrite put it there - is saved as the original it stands in for.
+            // The replacement is a temporary spell that a login sets up only later (OnPlayerLogin) or not at all:
+            // _LoadActions refused it ("ActionButton loading problem") and the button was lost - the Reaper's Wraith
+            // Claw, a Witch Hunter's Dawn Blade child. The original loads, and shows the replacement again while
+            // the replacement lives (_LoadActions).
+            if (uint32 const superseded = GetSupersededOriginal(action))
+                action = superseded;
             sScriptMgr->OnPlayerNormalizeActionButtonSpell(this, action, false);
+        }
 
         switch (itr->second.uState)
         {

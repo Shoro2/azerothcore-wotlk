@@ -2868,12 +2868,24 @@ void Player::SendInitialSpells()
     std::size_t countPos = data.wpos();
     data << uint16(spellCount);                             // spell count placeholder
 
+    // Forgotten Land: list what the client shows. An original a live supersede (SetTemporarySpellReplacement) shows
+    // its replacement in the place of is not listed - the replacement is, in its place, as SMSG_SUPERCEDED_SPELL put
+    // it there. Listing both made the client hold the original twice once the supersede was turned back after a
+    // login inside it (the Barbarian's Throw Weapon after a relog inside the Rapid Throw proc).
+    std::set<uint32> superseded;
+    for (auto const& entry : m_temporarySpellReplacements)
+        if (GetSupersedingSpell(entry.first))
+            superseded.insert(entry.first);
+
     for (PlayerSpellMap::const_iterator itr = m_spells.begin(); itr != m_spells.end(); ++itr)
     {
         if (itr->second->State == PLAYERSPELL_REMOVED)
             continue;
 
         if (!itr->second->Active || !itr->second->IsInSpec(GetActiveSpec()))
+            continue;
+
+        if (superseded.count(itr->first))
             continue;
 
         data << uint32(itr->first);
@@ -13940,6 +13952,25 @@ uint32 Player::GetTemporarySpellReplacement(uint32 original) const
     auto itr = m_temporarySpellReplacements.find(original);
     return itr != m_temporarySpellReplacements.end() && HasActiveSpell(original) && HasActiveSpell(itr->second) ?
         itr->second : original;
+}
+
+uint32 Player::GetSupersedingSpell(uint32 original) const
+{
+    if (m_temporarySpellReplacementsOnBar.count(original))
+        return 0;
+
+    uint32 const shown = GetTemporarySpellReplacement(original);
+    return shown != original ? shown : 0;
+}
+
+uint32 Player::GetSupersededOriginal(uint32 replacement) const
+{
+    uint32 best = 0;
+    for (auto const& entry : m_temporarySpellReplacements)
+        if (entry.second == replacement && GetSupersedingSpell(entry.first) == replacement &&
+            (!best || sSpellMgr->GetSpellRank(entry.first) > sSpellMgr->GetSpellRank(best)))
+            best = entry.first;
+    return best;
 }
 
 // Forgotten Land: announce a supersede of what the book and the buttons show in an original's place. The client

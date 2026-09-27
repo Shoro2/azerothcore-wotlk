@@ -130,6 +130,8 @@ struct PlayerSpell
     PlayerSpellState State : 7; // UPPER CASE TO CAUSE CONSOLE ERRORS (CHECK EVERY USAGE)!
     bool Active            : 1; // UPPER CASE TO CAUSE CONSOLE ERRORS (CHECK EVERY USAGE)! lower rank of a spell are not useable, but learnt
     uint8 specMask         : 8;
+    // Forgotten Land: a PLAYERSPELL_TEMPORARY spell the client was never told about (Player::LearnHiddenTemporarySpell)
+    bool Hidden            : 1 = false;
     bool IsInSpec(uint8 spec) { return (specMask & (1 << spec)); }
 };
 
@@ -1806,6 +1808,15 @@ public:
     // Transient action replacements; never written to character spell ownership.
     void SetTemporarySpellReplacement(uint32 original, uint32 replacement);
     [[nodiscard]] uint32 GetTemporarySpellReplacement(uint32 original) const;
+    // Forgotten Land: the target of a temporary replacement, which the client is told nothing about until a replacement
+    // shows it in its original's place (SMSG_SUPERCEDED_SPELL). LearnHiddenTemporarySpell adds it without
+    // SMSG_LEARNED_SPELL and without the rank pass; ForgetHiddenTemporarySpell drops it again, once no live
+    // replacement shows it, without SMSG_REMOVED_SPELL and without taking the auras its casts left. SMSG_INITIAL_SPELLS
+    // lists it only while a live replacement shows it, and it is never superseded itself: the client has no entry of
+    // it that a supersede could turn.
+    bool LearnHiddenTemporarySpell(uint32 spellId);
+    bool ForgetHiddenTemporarySpell(uint32 spellId);
+    [[nodiscard]] bool IsHiddenTemporarySpell(uint32 spellId) const;
     [[nodiscard]] bool CanUseTwoHandWithShield(ItemTemplate const* main, ItemTemplate const* off) const;
     [[nodiscard]] float GetMeleeAbilityRangeBonus() const;
 

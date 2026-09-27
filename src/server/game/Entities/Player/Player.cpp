@@ -2870,12 +2870,16 @@ void Player::SendInitialSpells()
 
     // Forgotten Land: list what the client shows. An original a live supersede (SetTemporarySpellReplacement) shows
     // its replacement in the place of is not listed - the replacement is, in its place, as SMSG_SUPERCEDED_SPELL put
-    // it there. Listing both made the client hold the original twice once the supersede was turned back after a
-    // login inside it (the Barbarian's Throw Weapon after a relog inside the Rapid Throw proc).
-    std::set<uint32> superseded;
+    // it there - and a spell taught without telling the client (LearnHiddenTemporarySpell) is listed only while a
+    // live supersede shows it. Listing both made the client hold the original twice once the supersede was turned
+    // back after a login inside it, and listed a hidden spell as one of the player's own after every login.
+    std::set<uint32> superseded, shownInPlace;
     for (auto const& entry : m_temporarySpellReplacements)
-        if (GetSupersedingSpell(entry.first))
+        if (uint32 const shown = GetSupersedingSpell(entry.first))
+        {
             superseded.insert(entry.first);
+            shownInPlace.insert(shown);
+        }
 
     for (PlayerSpellMap::const_iterator itr = m_spells.begin(); itr != m_spells.end(); ++itr)
     {
@@ -2885,7 +2889,8 @@ void Player::SendInitialSpells()
         if (!itr->second->Active || !itr->second->IsInSpec(GetActiveSpec()))
             continue;
 
-        if (superseded.count(itr->first))
+        if (superseded.count(itr->first) || (itr->second->State == PLAYERSPELL_TEMPORARY && itr->second->Hidden &&
+            !shownInPlace.count(itr->first)))
             continue;
 
         data << uint32(itr->first);
@@ -13893,6 +13898,14 @@ void Player::SetTemporarySpellReplacement(uint32 original, uint32 replacement)
         if (!HasActiveSpell(original) || !HasActiveSpell(replacement))
             return;
 
+        // Forgotten Land: a spell taught without telling the client (LearnHiddenTemporarySpell) has no entry in the
+        // client's book unless a live replacement shows it in its original's place - and then it stands in, refused
+        // below. A supersede of it would append `replacement` as an entry of its own, and turning that back would
+        // list `original` for good: the Witch Hunter's family loop remapped the previous window's child so, whenever
+        // the unordered spell map put that child before the Dawn Blade ranks.
+        if (IsHiddenTemporarySpell(original))
+            return;
+
         // Forgotten Land: SMSG_SUPERCEDED_SPELL(old, new) makes a 3.3.5a client drop the first spellbook entry
         // of `old` (a second one too, if it has two), append `new` without looking for one already there, and
         // point every action button of `old` at `new`, reporting each button back with CMSG_SET_ACTION_BUTTON so
@@ -13952,6 +13965,61 @@ uint32 Player::GetTemporarySpellReplacement(uint32 original) const
     auto itr = m_temporarySpellReplacements.find(original);
     return itr != m_temporarySpellReplacements.end() && HasActiveSpell(original) && HasActiveSpell(itr->second) ?
         itr->second : original;
+}
+
+// Forgotten Land: teach a spell that is about to become a temporary replacement without telling the client:
+// temporary and learnFromSkill keep Player::_addSpell from sending SMSG_LEARNED_SPELL, updateActive = false keeps
+// Player::addSpell's rank pass from superseding a lower rank with it. The client hears of it only through the supersede
+// that shows it in an original's place (SetTemporarySpellReplacement), and only a spell this learn added is hidden.
+bool Player::LearnHiddenTemporarySpell(uint32 spellId)
+{
+    bool const known = m_spells.find(spellId) != m_spells.end();
+    bool const added = addSpell(spellId, SPEC_MASK_ALL, false, true, true);
+    PlayerSpellMap::iterator itr = m_spells.find(spellId);
+    if (!known && itr != m_spells.end() && itr->second->State == PLAYERSPELL_TEMPORARY)
+        itr->second->Hidden = true;
+    return added;
+}
+
+// Forgotten Land: forget a hidden spell once its replacement is over, as quietly as it was taught. The client lists it
+// no more (the supersede that showed it was turned back), so SMSG_REMOVED_SPELL would only print "You have unlearned
+// ..."; and Player::removeSpell would take the auras the spell's casts left on the player with it - Drawstring of
+// Elune's buff, cast from the very window whose end forgets the spell. A replacement onto it that no longer lives
+// goes with it, so that learning it again cannot bring that replacement back without the supersede that shows it.
+bool Player::ForgetHiddenTemporarySpell(uint32 spellId)
+{
+    PlayerSpellMap::iterator itr = m_spells.find(spellId);
+    if (itr == m_spells.end() || itr->second->State != PLAYERSPELL_TEMPORARY || !itr->second->Hidden)
+        return false;
+
+    for (auto const& [original, replacement] : m_temporarySpellReplacements)
+        if (replacement == spellId && original != spellId && GetTemporarySpellReplacement(original) == spellId)
+            return false;
+
+    for (auto it = m_temporarySpellReplacements.begin(); it != m_temporarySpellReplacements.end();)
+    {
+        if (it->first == spellId || it->second == spellId)
+        {
+            m_temporarySpellReplacementsOnBar.erase(it->first);
+            it = m_temporarySpellReplacements.erase(it);
+        }
+        else
+            ++it;
+    }
+
+    SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId);
+    delete itr->second;
+    m_spells.erase(itr);
+    // Player::_addSpell cast a passive spell's aura at the learn
+    if (spellInfo && spellInfo->IsPassive())
+        RemoveOwnedAura(spellId);
+    return true;
+}
+
+bool Player::IsHiddenTemporarySpell(uint32 spellId) const
+{
+    PlayerSpellMap::const_iterator itr = m_spells.find(spellId);
+    return itr != m_spells.end() && itr->second->State == PLAYERSPELL_TEMPORARY && itr->second->Hidden;
 }
 
 uint32 Player::GetSupersedingSpell(uint32 original) const

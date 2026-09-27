@@ -2970,6 +2970,8 @@ protected:
     [[nodiscard]] uint32 GetSupersededOriginal(uint32 replacement) const;
     // Forgotten Land: whether a live supersede of another rank of `original`'s chain shows `replacement`
     [[nodiscard]] bool IsShownBySupersedeInChain(uint32 replacement, uint32 original) const;
+    // Forgotten Land: turn back every live supersede `spellId` - being unlearned - is either side of
+    void TurnBackTemporarySpellReplacementsOf(uint32 spellId);
     PlayerTalentMap m_talents;
     uint32 m_lastPotionId;                              // last used health/mana potion in combat, that block next potion use
 

@@ -3244,11 +3244,36 @@ void Player::SendLearnPacket(uint32 spellId, bool learn)
     }
     else
     {
+        TurnBackTemporarySpellReplacementsOf(spellId);
         EndTemporarySpellReplacementsOnBar(spellId, true);
 
         WorldPacket data(SMSG_REMOVED_SPELL, 4);
         data << uint32(spellId);
         SendDirectMessage(&data);
+    }
+}
+
+// Forgotten Land: `spellId` is unlearned, and a live supersede (SetTemporarySpellReplacement) shows a replacement in
+// an original's place with `spellId` on either side of it. The client lists the replacement, not the original:
+// SMSG_REMOVED_SPELL of the original found no entry and left the replacement listed for a spell the player no longer
+// had - a specialization switch inside the Starcaller's Barrage window unlearns Starfire Shot - and SMSG_REMOVED_SPELL
+// of the replacement took the original's only entry with it. Turn such a supersede back first (the ranks swapped on
+// the bar onto its replacement leave the bar before it), so that the unlearn finds the entry and the buttons it is
+// meant for. Called after Player::removeSpell dropped `spellId`, so the other side decides whether the supersede lives.
+void Player::TurnBackTemporarySpellReplacementsOf(uint32 spellId)
+{
+    std::vector<std::pair<uint32, uint32>> live;
+    for (auto const& [original, replacement] : m_temporarySpellReplacements)
+        if (original != replacement && !m_temporarySpellReplacementsOnBar.count(original) &&
+            ((original == spellId && HasActiveSpell(replacement)) || (replacement == spellId && HasActiveSpell(original))))
+            live.emplace_back(original, replacement);
+
+    for (auto const& [original, replacement] : live)
+    {
+        EndTemporarySpellReplacementsOnBar(replacement, false);
+        m_temporarySpellReplacements.erase(original);
+        if (IsInWorld())
+            SendTemporarySpellReplacementSupersede(replacement, original);
     }
 }
 

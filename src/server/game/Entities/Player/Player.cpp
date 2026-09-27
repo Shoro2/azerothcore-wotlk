@@ -13886,13 +13886,10 @@ void Player::SetTemporarySpellReplacement(uint32 original, uint32 replacement)
     auto itr = m_temporarySpellReplacements.find(original);
     uint32 const previous = itr == m_temporarySpellReplacements.end() ? original : itr->second;
     bool const previousOnBar = m_temporarySpellReplacementsOnBar.count(original) != 0;
+    bool const clearing = !replacement;
     bool onBar = false;
-    if (!replacement)
-    {
-        m_temporarySpellReplacements.erase(original);
-        m_temporarySpellReplacementsOnBar.erase(original);
+    if (clearing)
         replacement = original;
-    }
     else
     {
         if (!HasActiveSpell(original) || !HasActiveSpell(replacement))
@@ -13932,11 +13929,31 @@ void Player::SetTemporarySpellReplacement(uint32 original, uint32 replacement)
         // nothing back for that packet (0x006D8750 -> 0x005AAE80(button, action, 0, 1)), so the saved bar keeps
         // the original. Such a target may not stand replaced itself: its buttons would show one spell and cast
         // another.
+        // Forgotten Land: the same holds for a target the supersede of another rank of `original`'s chain shows
+        // already. A spell stackable with ranks keeps every rank active and listed, so a supersede per rank listed
+        // the target once per rank (Starfire Shot's eight ranks, eight Starfire Barrages) and, turned back rank by
+        // rank, left each button on whichever rank came first. One rank's supersede shows the target; every other
+        // rank swaps it on the action bar only.
         PlayerSpellMap::const_iterator own = m_spells.find(replacement);
-        onBar = own != m_spells.end() && own->second->State != PLAYERSPELL_TEMPORARY;
+        onBar = (own != m_spells.end() && own->second->State != PLAYERSPELL_TEMPORARY) ||
+            IsShownBySupersedeInChain(replacement, original);
         if (onBar && GetTemporarySpellReplacement(replacement) != replacement)
             return;
+    }
 
+    // Forgotten Land: this original's supersede of `previous` ends or moves on, and the client knows `previous` no
+    // more - other ranks swapped on the bar onto it leave the bar first, before the supersede turns buttons that
+    // show `previous` (theirs too, on the client) to another spell and reports them.
+    if (!previousOnBar && previous != original && (previous != replacement || onBar))
+        EndTemporarySpellReplacementsOnBar(previous, false);
+
+    if (clearing)
+    {
+        m_temporarySpellReplacements.erase(original);
+        m_temporarySpellReplacementsOnBar.erase(original);
+    }
+    else
+    {
         m_temporarySpellReplacements[original] = replacement;
         if (onBar)
             m_temporarySpellReplacementsOnBar.insert(original);
@@ -14039,6 +14056,16 @@ uint32 Player::GetSupersededOriginal(uint32 replacement) const
             (!best || sSpellMgr->GetSpellRank(entry.first) > sSpellMgr->GetSpellRank(best)))
             best = entry.first;
     return best;
+}
+
+bool Player::IsShownBySupersedeInChain(uint32 replacement, uint32 original) const
+{
+    uint32 const chain = sSpellMgr->GetFirstSpellInChain(original);
+    for (auto const& entry : m_temporarySpellReplacements)
+        if (entry.first != original && entry.second == replacement && GetSupersedingSpell(entry.first) == replacement &&
+            sSpellMgr->GetFirstSpellInChain(entry.first) == chain)
+            return true;
+    return false;
 }
 
 // Forgotten Land: announce a supersede of what the book and the buttons show in an original's place. The client

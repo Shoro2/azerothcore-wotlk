@@ -2151,7 +2151,10 @@ void AuraEffect::HandleAuraModShapeshift(AuraApplication const* aurApp, uint8 mo
         case FORM_SPIRITOFREDEMPTION:                       // 0x20
             break;
         default:
-            LOG_ERROR("spells.aura.effect", "Auras: Unknown Shapeshift Type: {}", GetMiscValue());
+            // Forgotten Land: Aura::BuildEffectMaskForOwner lets only a form with its SpellShapeshiftForm row through,
+            // so every other form here is a real one without a power switch - the imported Chapters-of-Azeroth forms
+            // (Cursed Form, the Guardian formations, ...) keep the target's power type and are not reported as unknown.
+            break;
     }
 
     modelid = target->GetModelForForm(form, GetId());

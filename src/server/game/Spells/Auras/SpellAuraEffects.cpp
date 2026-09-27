@@ -2380,20 +2380,22 @@ void AuraEffect::HandleAuraModShapeshift(AuraApplication const* aurApp, uint8 mo
     if (apply && aurApp->GetRemoveMode())
         return;
 
+    // Forgotten Land: Aura::BuildEffectMaskForOwner refuses an aura whose form has no SpellShapeshiftForm row, so the
+    // lookup cannot come back empty here; it is tested anyway - this dereference used to crash the server.
     if (target->IsPlayer())
-    {
-        SpellShapeshiftFormEntry const* shapeInfo = sSpellShapeshiftFormStore.LookupEntry(form);
-        // Learn spells for shapeshift form - no need to send action bars or add spells to spellbook
-        for (uint8 i = 0; i < MAX_SHAPESHIFT_SPELLS; ++i)
+        if (SpellShapeshiftFormEntry const* shapeInfo = sSpellShapeshiftFormStore.LookupEntry(form))
         {
-            if (!shapeInfo->stanceSpell[i])
-                continue;
-            if (apply)
-                target->ToPlayer()->_addSpell(shapeInfo->stanceSpell[i], SPEC_MASK_ALL, true);
-            else
-                target->ToPlayer()->removeSpell(shapeInfo->stanceSpell[i], SPEC_MASK_ALL, true);
+            // Learn spells for shapeshift form - no need to send action bars or add spells to spellbook
+            for (uint8 i = 0; i < MAX_SHAPESHIFT_SPELLS; ++i)
+            {
+                if (!shapeInfo->stanceSpell[i])
+                    continue;
+                if (apply)
+                    target->ToPlayer()->_addSpell(shapeInfo->stanceSpell[i], SPEC_MASK_ALL, true);
+                else
+                    target->ToPlayer()->removeSpell(shapeInfo->stanceSpell[i], SPEC_MASK_ALL, true);
+            }
         }
-    }
 }
 
 void AuraEffect::HandleAuraTransform(AuraApplication const* aurApp, uint8 mode, bool apply) const

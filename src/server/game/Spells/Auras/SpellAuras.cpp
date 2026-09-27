@@ -18,6 +18,7 @@
 #include "ArenaSpectator.h"
 #include "CellImpl.h"
 #include "Common.h"
+#include "DBCStores.h"
 #include "GameTime.h"
 #include "GridNotifiers.h"
 #include "Log.h"
@@ -266,7 +267,26 @@ uint8 Aura::BuildEffectMaskForOwner(SpellInfo const* spellProto, uint8 avalibleE
         default:
             break;
     }
-    return effMask & avalibleEffectMask;
+    effMask &= avalibleEffectMask;
+
+    // Forgotten Land: a SPELL_AURA_MOD_SHAPESHIFT effect needs the SpellShapeshiftForm row of its form (the DBC file or
+    // spellshapeshiftform_dbc). AuraEffect::HandleAuraModShapeshift reads that row for a player target, and the client
+    // reads its own copy of it. An aura that names a form without a row - an imported spell whose form row was never
+    // imported - is refused here with an error line, for every owner, instead of crashing the server. Every form a
+    // stock spell names has its row, so with complete data nothing changes.
+    for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+    {
+        SpellEffectInfo const& effect = spellProto->Effects[i];
+        if ((effMask & (1 << i)) && effect.ApplyAuraName == SPELL_AURA_MOD_SHAPESHIFT &&
+            !sSpellShapeshiftFormStore.LookupEntry(effect.MiscValue))
+        {
+            LOG_ERROR("spells.aura.effect", "Aura: spell {} effect {} shapeshifts into form {}, which has no "
+                "SpellShapeshiftForm row - the aura is refused on {}", spellProto->Id, uint32(i), effect.MiscValue,
+                owner->GetGUID().ToString());
+            return 0;
+        }
+    }
+    return effMask;
 }
 
 Aura* Aura::TryRefreshStackOrCreate(SpellInfo const* spellproto, uint8 tryEffMask, WorldObject* owner, Unit* caster, int32* baseAmount /*= nullptr*/, Item* castItem /*= nullptr*/, ObjectGuid casterGUID /*= ObjectGuid::Empty*/, bool* refresh /*= nullptr*/, bool periodicReset /*= false*/)

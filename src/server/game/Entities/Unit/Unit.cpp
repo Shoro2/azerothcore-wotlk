@@ -8497,11 +8497,16 @@ void Unit::EnergizeBySpell(Unit* victim, uint32 spellID, uint32 damage, Powers p
     victim->ModifyPower(powerType, damage, false);
 
     // Happiness is internal hunter pet state, not combat assistance — energizing it must not generate threat
-    if (powerType != POWER_HAPPINESS)
+    if (powerType != POWER_HAPPINESS && !(powerType == POWER_MANA && victim->GainsManaWithoutThreat()))
         if (SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellID))
             victim->GetThreatMgr().ForwardThreatForAssistingMe(this, float(damage) / 2.0f, spellInfo, true);
 
     SendEnergizeSpellLog(victim, spellID, damage, powerType);
+}
+
+bool Unit::GainsManaWithoutThreat() const
+{
+    return IsPlayer() && HasAnyAuras(681330, 504786, 801145);
 }
 
 float Unit::SpellPctDamageModsDone(Unit* victim, SpellInfo const* spellProto, DamageEffectType damagetype)

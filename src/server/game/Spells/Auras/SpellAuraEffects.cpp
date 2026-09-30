@@ -4643,7 +4643,7 @@ void AuraEffect::HandleAuraModIncreaseHealth(AuraApplication const* aurApp, uint
     {
         if (int32(target->GetHealth()) > GetAmount())
             target->ModifyHealth(-GetAmount());
-        else
+        else if (target->IsAlive())
             target->SetHealth(1);
         target->HandleStatFlatModifier(UNIT_MOD_HEALTH, TOTAL_VALUE, float(GetAmount()), apply);
     }

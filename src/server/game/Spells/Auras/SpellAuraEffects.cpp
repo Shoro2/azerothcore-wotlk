@@ -753,9 +753,10 @@ void AuraEffect::CalculatePeriodic(Unit* caster, bool create, bool load)
         // reset periodic timer on aura create or on reapply when aura isn't dot
         // possibly we should not reset periodic timers only when aura is triggered by proc
         // or maybe there's a spell attribute somewhere
+        // FL: the leech exception is CoA's (Umbral Glaive); a stock leech aura keeps restarting its timer.
         bool resetPeriodicTimer = create
                                   || ((GetAuraType() != SPELL_AURA_PERIODIC_DAMAGE) && (GetAuraType() != SPELL_AURA_PERIODIC_DAMAGE_PERCENT) &&
-                                      (GetAuraType() != SPELL_AURA_PERIODIC_LEECH));
+                                      (GetAuraType() != SPELL_AURA_PERIODIC_LEECH || m_spellInfo->SpellFamilyName <= SPELLFAMILY_PET));
 
         if (resetPeriodicTimer)
         {

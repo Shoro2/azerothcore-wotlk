@@ -19,6 +19,12 @@
 #include "ScriptMgr.h"
 #include "ScriptMgrMacros.h"
 
+void ScriptMgr::OnAfterAuraEffectCalculateAmount(AuraEffect const* effect, Unit* caster, int32& amount)
+{
+    CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_ON_AFTER_AURA_EFFECT_CALCULATE_AMOUNT,
+        script->OnAfterAuraEffectCalculateAmount(effect, caster, amount));
+}
+
 void ScriptMgr::OnHeal(Unit* healer, Unit* reciever, uint32& gain)
 {
     CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_ON_HEAL, script->OnHeal(healer, reciever, gain));

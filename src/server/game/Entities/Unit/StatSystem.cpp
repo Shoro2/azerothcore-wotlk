@@ -171,7 +171,9 @@ bool Player::UpdateStats(Stats stat)
             break;
         case STAT_INTELLECT:
             UpdateMaxPower(POWER_MANA);
-            UpdateMaxHealth();                              // SPELL_AURA_ASCENSION_MOD_MAX_MANA_FROM_STAT, POWER_HEALTH branch
+            // FL: only an aura 328 turns Intellect into health; a stock player keeps its Intellect update without it.
+            if (HasAuraType(SPELL_AURA_ASCENSION_MOD_MAX_MANA_FROM_STAT))
+                UpdateMaxHealth();                          // SPELL_AURA_ASCENSION_MOD_MAX_MANA_FROM_STAT, POWER_HEALTH branch
             UpdateAllSpellCritChances();
             UpdateArmor();                                  //SPELL_AURA_MOD_RESISTANCE_OF_INTELLECT_PERCENT, only armor currently
             break;

@@ -27,6 +27,8 @@
 #include "AchievementMgr.h"
 #include "KillRewarder.h"
 
+class Object;
+
 namespace Trainer
 {
     enum class SpellState : uint8;
@@ -250,6 +252,7 @@ enum PlayerHook
     PLAYERHOOK_ON_BEFORE_RECEIVE_SPELL_LIST_FROM_TRAINER,
     PLAYERHOOK_ON_GET_TRAINER_SPELL_STATE,
     PLAYERHOOK_ON_AFTER_TRAIN_SPELL,
+    PLAYERHOOK_ON_REFRESH_QUEST_GIVER,
     PLAYERHOOK_END
 };
 
@@ -1044,6 +1047,16 @@ public:
      * @param spellId The id of the trainer spell that was bought
      */
     virtual void OnPlayerAfterTrainSpell(Player* /*player*/, Creature* /*trainer*/, uint32 /*spellId*/) {}
+
+    /**
+     * @brief This hook is called when a quest giver interaction would close the player's quest giver window.
+     *
+     * @param player Contains information about the Player
+     * @param questGiver The quest giver object
+     * @param quest The quest of the interaction
+     * @return true when a script refreshed the quest giver window and the core must keep it open
+     */
+    [[nodiscard]] virtual bool OnPlayerRefreshQuestGiver(Player* /*player*/, Object* /*questGiver*/, Quest const* /*quest*/) { return false; }
 };
 
 #endif

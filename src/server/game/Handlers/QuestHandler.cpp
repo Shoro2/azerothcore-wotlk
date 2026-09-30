@@ -146,7 +146,8 @@ void WorldSession::HandleQuestgiverAcceptQuestOpcode(WorldPacket& recvData)
         // prevent cheating
         if (!GetPlayer()->CanTakeQuest(quest, true))
         {
-            _player->PlayerTalkClass->SendCloseGossip();
+            if (!sScriptMgr->OnPlayerRefreshQuestGiver(_player, object, quest))
+                _player->PlayerTalkClass->SendCloseGossip();
             _player->SetDivider();
             return;
         }
@@ -188,13 +189,17 @@ void WorldSession::HandleQuestgiverAcceptQuestOpcode(WorldPacket& recvData)
                 }
             }
 
-            _player->PlayerTalkClass->SendCloseGossip();
+            if (!sScriptMgr->OnPlayerRefreshQuestGiver(_player, object, quest))
+                _player->PlayerTalkClass->SendCloseGossip();
 
             if (quest->GetSrcSpell() > 0)
                 _player->CastSpell(_player, quest->GetSrcSpell(), true);
 
             return;
         }
+
+        if (sScriptMgr->OnPlayerRefreshQuestGiver(_player, object, quest))
+            return;
     }
 
     _player->PlayerTalkClass->SendCloseGossip();
@@ -347,7 +352,7 @@ void WorldSession::HandleQuestgiverChooseRewardOpcode(WorldPacket& recvData)
                     break;
             }
         }
-        else
+        else if (!sScriptMgr->OnPlayerRefreshQuestGiver(_player, object, quest))
             _player->PlayerTalkClass->SendQuestGiverOfferReward(quest, guid, true);
     }
 }

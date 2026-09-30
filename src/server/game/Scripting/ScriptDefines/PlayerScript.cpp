@@ -1056,6 +1056,11 @@ void ScriptMgr::OnPlayerAfterTrainSpell(Player* player, Creature* trainer, uint3
     CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_AFTER_TRAIN_SPELL, script->OnPlayerAfterTrainSpell(player, trainer, spellId));
 }
 
+bool ScriptMgr::OnPlayerRefreshQuestGiver(Player* player, Object* questGiver, Quest const* quest)
+{
+    CALL_ENABLED_BOOLEAN_HOOKS_WITH_DEFAULT_FALSE(PlayerScript, PLAYERHOOK_ON_REFRESH_QUEST_GIVER, script->OnPlayerRefreshQuestGiver(player, questGiver, quest));
+}
+
 PlayerScript::PlayerScript(char const* name, std::vector<uint16> enabledHooks)
     : ScriptObject(name, PLAYERHOOK_END)
 {

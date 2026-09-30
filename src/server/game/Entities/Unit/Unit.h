@@ -1365,7 +1365,7 @@ public:
 
     void SetAuraStack(uint32 spellId, Unit* target, uint32 stack);
 
-    int32 GetHighestExclusiveSameEffectSpellGroupValue(AuraEffect const* aurEff, AuraType auraType, bool checkMiscValue = false, int32 miscValue = 0) const;
+    int32 GetHighestExclusiveSameEffectSpellGroupValue(AuraEffect const* aurEff, AuraType auraType, bool checkMiscValue = false, int32 miscValue = 0, bool ascensionFamiliesOnly = false) const;
     bool IsHighestExclusiveAura(Aura const* aura, bool removeOtherAuraApplications = false);
     bool IsHighestExclusiveAuraEffect(SpellInfo const* spellInfo, AuraType auraType, int32 effectAmount, uint8 auraEffectMask, bool removeOtherAuraApplications = false);
 

@@ -4239,12 +4239,14 @@ void AuraEffect::HandleAuraModResistance(AuraApplication const* aurApp, uint8 mo
 
     Unit* target = aurApp->GetTarget();
     int32 amount = GetAmount();
-    if (GetMiscValue() == SPELL_SCHOOL_MASK_NORMAL)
+    // FL: the armor grouping is CoA's and stays with the Ascension class families: a stock armor aura applies in full,
+    // and a CoA aura is measured only against the CoA auras of its group, so stock and CoA armor stack as before.
+    if (GetMiscValue() == SPELL_SCHOOL_MASK_NORMAL && m_spellInfo->SpellFamilyName > SPELLFAMILY_PET)
     {
         // Keep area-aura sources active, but apply only the strongest grouped armor contribution.
         // On removal, the same delta restores the next strongest remaining source.
         int32 groupAmount = target->GetHighestExclusiveSameEffectSpellGroupValue(this, GetAuraType(),
-            true, SPELL_SCHOOL_MASK_NORMAL);
+            true, SPELL_SCHOOL_MASK_NORMAL, true);
         if (std::abs(groupAmount) >= std::abs(amount))
             return;
         amount -= groupAmount;

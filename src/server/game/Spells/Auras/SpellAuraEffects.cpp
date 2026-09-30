@@ -1213,8 +1213,9 @@ bool AuraEffect::IsAffectedOnSpell(SpellInfo const* spell) const
     if (!spell)
         return false;
 
+    // FL: CoA's school test stays with the Ascension class families; a stock aura keeps its class-mask-only answer.
     if (GetAuraType() == SPELL_AURA_MOD_DAMAGE_FROM_CASTER && GetMiscValue() &&
-        !(GetMiscValue() & spell->GetSchoolMask()))
+        m_spellInfo->SpellFamilyName > SPELLFAMILY_PET && !(GetMiscValue() & spell->GetSchoolMask()))
         return false;
 
     // Check family name and EffectClassMask

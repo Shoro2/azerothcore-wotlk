@@ -5,6 +5,7 @@
 
 ## Custom changes (project-specific)
 
+- 2026-10-03 — fix(DB): Add Paragon allocation deletion statement — async `CHAR_DEL_PARAGON_POINTS` for mod-paragon's permanent-deletion hook; T1 isolated Windows worldserver build and native deletion fixture; companion mod-paragon change required, full-fleet integration/deployment pending (vault MIG-068)
 > As of: 2026-09-17. Add a line here for every new custom commit.
 
 ### Custom classes (CoA port)

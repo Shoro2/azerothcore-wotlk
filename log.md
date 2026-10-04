@@ -5,6 +5,8 @@
 
 ## Custom changes (project-specific)
 
+- 2026-10-04 — fix(Core/Accounts): Refuse account deletion before hooks/kicks/character or auth-row removal if any account character has a pending linked report; guard explicit character erase before kick/success message. Reuse the existing character query/result, no added queries/API. Prevent account deletion from continuing after central void DeleteFromDB deferral. Source-derived isolated lifecycle proof and syntax checks; no existing test account/character deletion fixture.
+
 - 2026-10-04 — feat(Core/Tickets): Provide asynchronous linked player-report persistence: world-thread per-character pending leases guard native ticket/character mutations; committed tickets publish in place; two characters-DB statements support the additive module schema. Check transaction START/COMMIT results and suppress single-statement reconnect/replay within ExecuteTransaction. Companion mod-fl-player-reports required; isolated fault/protocol/UI checks pass, shared build/native/client acceptance pending (MIG-079).
 
 - 2026-10-03 — fix(DB): Add Paragon allocation deletion statement — async `CHAR_DEL_PARAGON_POINTS` for mod-paragon's permanent-deletion hook; T1 isolated Windows worldserver build and native deletion fixture; companion mod-paragon change required, full-fleet integration/deployment pending (vault MIG-068)

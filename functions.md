@@ -149,6 +149,14 @@ Category convention: for custom modules use `mod-<name>` as the category.
 lease. Native client/GM mutations and character deletion refuse while pending;
 pure ticket reads remain available. `PublishCommittedTicket` inserts a new
 committed ticket or assigns an existing object in place, releasing the lease.
+
+Account deletion checks every GUID from its existing character query before
+`OnBeforeAccountDelete`, kicks or row deletion; a pending report returns the
+existing internal-error result with a retry log. Explicit `.character erase`
+refuses before kick/success output. The normal account-delete hook now runs after
+the read/pending preflight and before the original deletion sequence. The central
+void `Player::DeleteFromDB` guard remains a final defense.
+
 The module owns async callbacks, receipt verification and any unknown-outcome
 lease. The feature requires `CharacterDatabase.WorkerThreads=1` for FIFO ordering
 against earlier queued native ticket saves; the module fails closed otherwise.

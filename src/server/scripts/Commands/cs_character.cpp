@@ -27,6 +27,7 @@
 #include "PlayerDump.h"
 #include "RBAC.h"
 #include "ReputationMgr.h"
+#include "TicketMgr.h"
 #include "Timer.h"
 #include "World.h"
 #include "WorldSession.h"
@@ -743,6 +744,11 @@ public:
      */
     static bool HandleCharacterEraseCommand(ChatHandler* handler, PlayerIdentifier player)
     {
+        if (sTicketMgr->IsWritePending(player.GetGUID()))
+        {
+            handler->SendErrorMessage("This character has a report being saved. Please try again in a moment.", false);
+            return false;
+        }
         uint32 accountId;
         if (Player* target = player.GetConnectedPlayer())
         {

@@ -5,6 +5,8 @@
 
 ## Custom changes (project-specific)
 
+- 2026-10-04 — fix(DB/Tickets): Explicit unsigned binary integer results for all four player-report receipt fields. MySQL's mixed unsigned BIGINT/signed COALESCE returns NEWDECIMAL; interpreting its prepared ASCII zero as uint64 falsely acknowledges an absent report. Actual native run338 failed6/3 with no new report/ticket rows; preserve that result. Companion module uses uint64 getters and validates stored ticket identity before narrowing. Isolated real MySQL prepared-result metadata/value proof; corrected native acceptance remains pending.
+
 - 2026-10-04 — fix(Core/Accounts): Refuse account deletion before hooks/kicks/character or auth-row removal if any account character has a pending linked report; guard explicit character erase before kick/success message. Reuse the existing character query/result, no added queries/API. Prevent account deletion from continuing after central void DeleteFromDB deferral. Source-derived isolated lifecycle proof and syntax checks; no existing test account/character deletion fixture.
 
 - 2026-10-04 — feat(Core/Tickets): Provide asynchronous linked player-report persistence: world-thread per-character pending leases guard native ticket/character mutations; committed tickets publish in place; two characters-DB statements support the additive module schema. Check transaction START/COMMIT results and suppress single-statement reconnect/replay within ExecuteTransaction. Companion mod-fl-player-reports required; isolated fault/protocol/UI checks pass, shared build/native/client acceptance pending (MIG-079).

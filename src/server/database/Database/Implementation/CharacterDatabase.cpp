@@ -702,7 +702,9 @@ void CharacterDatabaseConnection::DoPrepareStatements()
 
     // The companion characters migration precedes statement preparation.
     PrepareStatement(CHAR_INS_FL_PLAYER_REPORT, "INSERT INTO `fl_player_report` (`Token`, `AccountId`, `PlayerGuid`, `PlayerName`, `Kind`, `TicketId`, `TicketCreateTime`, `CapturedAt`, `SubmittedAt`, `MapId`, `InstanceId`, `ZoneId`, `AreaId`, `PositionX`, `PositionY`, `PositionZ`, `Orientation`, `TargetType`, `TargetEntry`, `TargetGuid`, `TargetName`, `ClientVersion`, `ServerVersion`, `AddonVersion`, `Description`, `AdditionalInfo`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", CONNECTION_ASYNC);
-    PrepareStatement(CHAR_SEL_FL_PLAYER_REPORT_RECEIPT, "SELECT COALESCE(r.`Id`, 0), COALESCE(r.`TicketId`, 0), COALESCE(r.`TicketCreateTime`, 0), COALESCE(t.`createTime`, 0), COALESCE(t.`description`, '') FROM (SELECT 1) AS sentinel LEFT JOIN `fl_player_report` r ON r.`PlayerGuid` = ? AND r.`AccountId` = ? AND r.`Token` = ? LEFT JOIN `gm_ticket` t ON t.`id` = r.`TicketId` AND t.`createTime` = r.`TicketCreateTime`", CONNECTION_ASYNC);
+    // Mixed unsigned BIGINT/signed literals make COALESCE return NEWDECIMAL.
+    // Prepared numeric getters require binary integers, including the absent sentinel.
+    PrepareStatement(CHAR_SEL_FL_PLAYER_REPORT_RECEIPT, "SELECT CAST(COALESCE(r.`Id`, 0) AS UNSIGNED), CAST(COALESCE(r.`TicketId`, 0) AS UNSIGNED), CAST(COALESCE(r.`TicketCreateTime`, 0) AS UNSIGNED), CAST(COALESCE(t.`createTime`, 0) AS UNSIGNED), COALESCE(t.`description`, '') FROM (SELECT 1) AS sentinel LEFT JOIN `fl_player_report` r ON r.`PlayerGuid` = ? AND r.`AccountId` = ? AND r.`Token` = ? LEFT JOIN `gm_ticket` t ON t.`id` = r.`TicketId` AND t.`createTime` = r.`TicketCreateTime`", CONNECTION_ASYNC);
 }
 
 CharacterDatabaseConnection::CharacterDatabaseConnection(MySQLConnectionInfo& connInfo) : MySQLConnection(connInfo)

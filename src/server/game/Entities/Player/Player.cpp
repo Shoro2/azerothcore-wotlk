@@ -4324,6 +4324,11 @@ bool Player::HasActiveSpell(uint32 spell) const
  */
 void Player::DeleteFromDB(ObjectGuid::LowType lowGuid, uint32 accountId, bool updateRealmChars, bool deleteFinally)
 {
+    if (sTicketMgr->IsWritePending(ObjectGuid::Create<HighGuid::Player>(lowGuid)))
+    {
+        LOG_WARN("entities.player.character", "Character {} deletion deferred: linked ticket write pending", lowGuid);
+        return;
+    }
     // for not existed account avoid update realm
     if (!accountId)
         updateRealmChars = false;

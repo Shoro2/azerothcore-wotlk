@@ -76,9 +76,9 @@ public:
     bool _Query(std::string_view sql, MySQLResult** pResult, MySQLField** pFields, uint64* pRowCount, uint32* pFieldCount);
     bool _Query(PreparedStatementBase* stmt, MySQLPreparedStatement** mysqlStmt, MySQLResult** pResult, uint64* pRowCount, uint32* pFieldCount);
 
-    void BeginTransaction();
+    bool BeginTransaction();
     void RollbackTransaction();
-    void CommitTransaction();
+    bool CommitTransaction();
     int ExecuteTransaction(std::shared_ptr<TransactionBase> transaction);
     std::size_t EscapeString(char* to, char const* from, std::size_t length);
     void Ping();
@@ -114,6 +114,7 @@ private:
     MySQLConnectionInfo& m_connectionInfo;              //! Connection info (used for logging)
     ConnectionFlags m_connectionFlags;                  //! Connection flags (for preparing relevant statements)
     std::mutex m_Mutex;
+    bool _transactionActive = false;
 
     MySQLConnection(MySQLConnection const& right) = delete;
     MySQLConnection& operator=(MySQLConnection const& right) = delete;

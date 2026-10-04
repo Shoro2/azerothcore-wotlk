@@ -597,6 +597,10 @@ enum CharacterDatabaseStatements : uint32
 
     CHAR_SEL_FRESH_CHECK_GUID_COUNT,
 
+    // mod-fl-player-reports
+    CHAR_INS_FL_PLAYER_REPORT,
+    CHAR_SEL_FL_PLAYER_REPORT_RECEIPT,
+
     MAX_CHARACTERDATABASE_STATEMENTS
 };
 

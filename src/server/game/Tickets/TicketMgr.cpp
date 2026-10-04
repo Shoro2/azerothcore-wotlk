@@ -280,6 +280,8 @@ void TicketMgr::Initialize() { SetStatus(sWorld->getBoolConfig(CONFIG_ALLOW_TICK
 
 void TicketMgr::ResetTickets()
 {
+    if (HasPendingWrites())
+        return;
     for (GmTicketList::const_iterator itr = _ticketList.begin(); itr != _ticketList.end();)
     {
         if (itr->second->IsClosed())
@@ -301,6 +303,8 @@ void TicketMgr::ResetTickets()
 
 void TicketMgr::LoadTickets()
 {
+    if (HasPendingWrites())
+        return;
     uint32 oldMSTime = getMSTime();
 
     for (GmTicketList::const_iterator itr = _ticketList.begin(); itr != _ticketList.end(); ++itr)
@@ -360,6 +364,7 @@ void TicketMgr::LoadSurveys()
 
 void TicketMgr::AddTicket(GmTicket* ticket)
 {
+    ASSERT(!IsWritePending(ticket->GetPlayerGuid()));
     _ticketList[ticket->GetId()] = ticket;
     if (!ticket->IsClosed())
         ++_openTicketCount;
@@ -369,8 +374,52 @@ void TicketMgr::AddTicket(GmTicket* ticket)
     sScriptMgr->OnTicketCreate(ticket);
 }
 
+bool TicketMgr::BeginPendingWrite(ObjectGuid playerGuid)
+{
+    return _pendingWrites.insert(playerGuid).second;
+}
+
+bool TicketMgr::IsWritePending(ObjectGuid playerGuid) const
+{
+    return _pendingWrites.count(playerGuid) != 0;
+}
+
+bool TicketMgr::IsWritePending(uint32 ticketId) const
+{
+    auto itr = _ticketList.find(ticketId);
+    return itr != _ticketList.end() &&
+        IsWritePending(itr->second->GetPlayerGuid());
+}
+
+void TicketMgr::EndPendingWrite(ObjectGuid playerGuid)
+{
+    _pendingWrites.erase(playerGuid);
+}
+
+void TicketMgr::PublishCommittedTicket(GmTicket* ticket)
+{
+    ASSERT(IsWritePending(ticket->GetPlayerGuid()));
+    auto itr = _ticketList.find(ticket->GetId());
+    if (itr == _ticketList.end())
+    {
+        _ticketList[ticket->GetId()] = ticket;
+        if (!ticket->IsClosed())
+            ++_openTicketCount;
+        EndPendingWrite(ticket->GetPlayerGuid());
+        sScriptMgr->OnTicketCreate(ticket);
+    }
+    else
+    {
+        *itr->second = *ticket;
+        EndPendingWrite(ticket->GetPlayerGuid());
+        delete ticket;
+    }
+}
+
 void TicketMgr::CloseTicket(uint32 ticketId, ObjectGuid source)
 {
+    if (IsWritePending(ticketId))
+        return;
     if (GmTicket* ticket = GetTicket(ticketId))
     {
         CharacterDatabaseTransaction trans = CharacterDatabaseTransaction(nullptr);
@@ -385,6 +434,8 @@ void TicketMgr::CloseTicket(uint32 ticketId, ObjectGuid source)
 
 void TicketMgr::RemoveTicket(uint32 ticketId)
 {
+    if (IsWritePending(ticketId))
+        return;
     if (GmTicket* ticket = GetTicket(ticketId))
     {
         ticket->DeleteFromDB();
@@ -395,6 +446,8 @@ void TicketMgr::RemoveTicket(uint32 ticketId)
 
 void TicketMgr::ResolveAndCloseTicket(uint32 ticketId, ObjectGuid source)
 {
+    if (IsWritePending(ticketId))
+        return;
     if (GmTicket* ticket = GetTicket(ticketId))
     {
         CharacterDatabaseTransaction trans = CharacterDatabaseTransaction(nullptr);

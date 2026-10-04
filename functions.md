@@ -143,6 +143,30 @@ Category convention: for custom modules use `mod-<name>` as the category.
 
 ## Known custom pain points
 
+### Linked player-report writes (FL, 2026-10-04)
+
+`TicketMgr::BeginPendingWrite` / `EndPendingWrite` own a world-thread character
+lease. Native client/GM mutations and character deletion refuse while pending;
+pure ticket reads remain available. `PublishCommittedTicket` inserts a new
+committed ticket or assigns an existing object in place, releasing the lease.
+The module owns async callbacks, receipt verification and any unknown-outcome
+lease. The feature requires `CharacterDatabase.WorkerThreads=1` for FIFO ordering
+against earlier queued native ticket saves; the module fails closed otherwise.
+
+`MySQLConnection::BeginTransaction` and `CommitTransaction` now return their
+Execute result. `ExecuteTransaction` checks both boundaries, captures error
+before rollback and restores a connection-local transaction flag on every exit.
+Transport loss within that scope returns failure without reconnecting/replaying
+one statement into a new autocommit session. Ordinary reconnect and the caller's
+whole-transaction deadlock retry remain intact. A failed COMMIT reply can be an
+unknown outcome; it does not establish rollback. Linked reports reconcile through
+a player/account/token receipt sentinel and exact native ticket linkage.
+
+The companion additive `fl_player_report` table must exist before this core starts:
+`CHAR_INS_FL_PLAYER_REPORT` and `CHAR_SEL_FL_PLAYER_REPORT_RECEIPT` are always
+prepared. Preserve the table on rollback. Source-derived fake connection/recovery
+proofs live in the companion module; they are T0, not live connection-loss evidence.
+
 - **`SpellMgr.h` ProcFlag values**: some online sources (wowhead, wowdb) have wrong values. Always verify against `SpellMgr.h`. Corrected table in `share-public/docs/03-spell-system.md`.
 - **DBC override layer**: server reads `.dbc` files first, then optional DB override tables (`spell_dbc`, `spellitemenchantment_dbc`). When editing, keep both in sync.
 - **`-Werror`**: any unused-variable, missing-override, similar issues block CI immediately.

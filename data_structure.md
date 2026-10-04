@@ -4,6 +4,13 @@
 
 ## Top level (excerpt)
 
+FL linked reports (2026-10-04): the companion `modules/mod-fl-player-reports`
+owns `fl_player_report`, addon files and callbacks. CharacterDatabase declares
+the two prepared statements; TicketMgr holds only a world-thread pending-player
+set and native tickets. The additive characters schema is a startup prerequisite
+for the patched core and remains during rollback. No world/DBC/client layout
+change is required.
+
 ```
 azerothcore-wotlk/
 ├── .github/                                # PR templates, workflows, CODEOWNERS

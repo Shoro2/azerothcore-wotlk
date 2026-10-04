@@ -29,6 +29,15 @@
 
 void WorldSession::HandleGMTicketCreateOpcode(WorldPacket& recvData)
 {
+    if (sTicketMgr->IsWritePending(GetPlayer()->GetGUID()))
+    {
+        ChatHandler(this).SendNotification("Your report is being saved. Please try again in a moment.");
+        recvData.rfinish();
+        WorldPacket data(SMSG_GMTICKET_CREATE, 4);
+        data << uint32(GMTICKET_RESPONSE_CREATE_ERROR);
+        SendPacket(&data);
+        return;
+    }
     // Don't accept tickets if the ticket queue is disabled. (Ticket UI is greyed out but not fully dependable)
     if (sTicketMgr->GetStatus() == GMTICKET_QUEUE_STATUS_DISABLED)
         return;
@@ -130,6 +139,15 @@ void WorldSession::HandleGMTicketCreateOpcode(WorldPacket& recvData)
 
 void WorldSession::HandleGMTicketUpdateOpcode(WorldPacket& recv_data)
 {
+    if (sTicketMgr->IsWritePending(GetPlayer()->GetGUID()))
+    {
+        ChatHandler(this).SendNotification("Your report is being saved. Please try again in a moment.");
+        recv_data.rfinish();
+        WorldPacket data(SMSG_GMTICKET_UPDATETEXT, 4);
+        data << uint32(GMTICKET_RESPONSE_UPDATE_ERROR);
+        SendPacket(&data);
+        return;
+    }
     std::string message;
     recv_data >> message;
 
@@ -157,6 +175,11 @@ void WorldSession::HandleGMTicketUpdateOpcode(WorldPacket& recv_data)
 
 void WorldSession::HandleGMTicketDeleteOpcode(WorldPacket& /*recv_data*/)
 {
+    if (sTicketMgr->IsWritePending(GetPlayer()->GetGUID()))
+    {
+        ChatHandler(this).SendNotification("Your report is being saved. Please try again in a moment.");
+        return;
+    }
     if (GmTicket* ticket = sTicketMgr->GetTicketByPlayer(GetPlayer()->GetGUID()))
     {
         WorldPacket data(SMSG_GMTICKET_DELETETICKET, 4);
@@ -279,6 +302,11 @@ void WorldSession::HandleReportLag(WorldPacket& recv_data)
 
 void WorldSession::HandleGMResponseResolve(WorldPacket& /*recvPacket*/)
 {
+    if (sTicketMgr->IsWritePending(GetPlayer()->GetGUID()))
+    {
+        ChatHandler(this).SendNotification("Your report is being saved. Please try again in a moment.");
+        return;
+    }
     // empty packet
     if (GmTicket* ticket = sTicketMgr->GetTicketByPlayer(GetPlayer()->GetGUID()))
     {

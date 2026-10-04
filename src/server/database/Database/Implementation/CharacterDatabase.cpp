@@ -699,6 +699,10 @@ void CharacterDatabaseConnection::DoPrepareStatements()
     PrepareStatement(CHAR_REP_PARAGON_ITEM, "REPLACE INTO `character_paragon_item` (`itemGuid`, `paragonLevel`, `role`, `mainStat`, `combatRating1`, `combatRating2`, `statAmount`, `cursed`, `passiveSpellEnchantId`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", CONNECTION_ASYNC);
     PrepareStatement(CHAR_SEL_PARAGON_ITEM_LEVEL, "SELECT `paragonLevel` FROM `character_paragon_item` WHERE `itemGuid` = ?", CONNECTION_SYNCH);
     PrepareStatement(CHAR_SEL_PARAGON_LEVEL_BY_CHAR, "SELECT cp.`level` FROM `character_paragon` cp INNER JOIN `characters` c ON c.`account` = cp.`accountID` WHERE c.`guid` = ?", CONNECTION_SYNCH);
+
+    // The companion characters migration precedes statement preparation.
+    PrepareStatement(CHAR_INS_FL_PLAYER_REPORT, "INSERT INTO `fl_player_report` (`Token`, `AccountId`, `PlayerGuid`, `PlayerName`, `Kind`, `TicketId`, `TicketCreateTime`, `CapturedAt`, `SubmittedAt`, `MapId`, `InstanceId`, `ZoneId`, `AreaId`, `PositionX`, `PositionY`, `PositionZ`, `Orientation`, `TargetType`, `TargetEntry`, `TargetGuid`, `TargetName`, `ClientVersion`, `ServerVersion`, `AddonVersion`, `Description`, `AdditionalInfo`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", CONNECTION_ASYNC);
+    PrepareStatement(CHAR_SEL_FL_PLAYER_REPORT_RECEIPT, "SELECT COALESCE(r.`Id`, 0), COALESCE(r.`TicketId`, 0), COALESCE(r.`TicketCreateTime`, 0), COALESCE(t.`createTime`, 0), COALESCE(t.`description`, '') FROM (SELECT 1) AS sentinel LEFT JOIN `fl_player_report` r ON r.`PlayerGuid` = ? AND r.`AccountId` = ? AND r.`Token` = ? LEFT JOIN `gm_ticket` t ON t.`id` = r.`TicketId` AND t.`createTime` = r.`TicketCreateTime`", CONNECTION_ASYNC);
 }
 
 CharacterDatabaseConnection::CharacterDatabaseConnection(MySQLConnectionInfo& connInfo) : MySQLConnection(connInfo)

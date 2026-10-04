@@ -72,6 +72,12 @@ public:
         if (!normalizePlayerName(target))
             return false;
 
+        if (sTicketMgr->IsWritePending(ticketId))
+        {
+            handler->SendSysMessage("This ticket is being saved. Please try again in a moment.");
+            return true;
+        }
+
         GmTicket* ticket = sTicketMgr->GetTicket(ticketId);
         if (!ticket || ticket->IsClosed())
         {
@@ -120,6 +126,12 @@ public:
 
     static bool HandleGMTicketCloseByIdCommand(ChatHandler* handler, uint32 ticketId)
     {
+        if (sTicketMgr->IsWritePending(ticketId))
+        {
+            handler->SendSysMessage("This ticket is being saved. Please try again in a moment.");
+            return true;
+        }
+
         GmTicket* ticket = sTicketMgr->GetTicket(ticketId);
         if (!ticket || ticket->IsClosed() || ticket->IsCompleted())
         {
@@ -158,6 +170,12 @@ public:
         if (comment.empty())
             return false;
 
+        if (sTicketMgr->IsWritePending(ticketId))
+        {
+            handler->SendSysMessage("This ticket is being saved. Please try again in a moment.");
+            return true;
+        }
+
         GmTicket* ticket = sTicketMgr->GetTicket(ticketId);
         if (!ticket)
         {
@@ -195,6 +213,12 @@ public:
 
     static bool HandleGMTicketCompleteCommand(ChatHandler* handler, uint32 ticketId, std::optional<std::string> response)
     {
+        if (sTicketMgr->IsWritePending(ticketId))
+        {
+            handler->SendSysMessage("This ticket is being saved. Please try again in a moment.");
+            return true;
+        }
+
         GmTicket* ticket = sTicketMgr->GetTicket(ticketId);
         if (!ticket || ticket->IsClosed() || ticket->IsCompleted())
         {
@@ -236,6 +260,12 @@ public:
 
     static bool HandleGMTicketDeleteByIdCommand(ChatHandler* handler, uint32 ticketId)
     {
+        if (sTicketMgr->IsWritePending(ticketId))
+        {
+            handler->SendSysMessage("This ticket is being saved. Please try again in a moment.");
+            return true;
+        }
+
         GmTicket* ticket = sTicketMgr->GetTicket(ticketId);
         if (!ticket)
         {
@@ -268,6 +298,12 @@ public:
 
     static bool HandleGMTicketEscalateCommand(ChatHandler* handler, uint32 ticketId)
     {
+        if (sTicketMgr->IsWritePending(ticketId))
+        {
+            handler->SendSysMessage("This ticket is being saved. Please try again in a moment.");
+            return true;
+        }
+
         GmTicket* ticket = sTicketMgr->GetTicket(ticketId);
         if (!ticket || ticket->IsClosed() || ticket->IsCompleted() || ticket->GetEscalatedStatus() != TICKET_UNASSIGNED)
         {
@@ -304,7 +340,7 @@ public:
 
     static bool HandleGMTicketResetCommand(ChatHandler* handler)
     {
-        if (sTicketMgr->GetOpenTicketCount())
+        if (sTicketMgr->GetOpenTicketCount() || sTicketMgr->HasPendingWrites())
         {
             handler->SendSysMessage(LANG_COMMAND_TICKETPENDING);
             return true;
@@ -328,6 +364,12 @@ public:
 
     static bool HandleGMTicketUnAssignCommand(ChatHandler* handler, uint32 ticketId)
     {
+        if (sTicketMgr->IsWritePending(ticketId))
+        {
+            handler->SendSysMessage("This ticket is being saved. Please try again in a moment.");
+            return true;
+        }
+
         GmTicket* ticket = sTicketMgr->GetTicket(ticketId);
         if (!ticket || ticket->IsClosed())
         {
@@ -377,6 +419,12 @@ public:
 
     static bool HandleGMTicketGetByIdCommand(ChatHandler* handler, uint32 ticketId)
     {
+        if (sTicketMgr->IsWritePending(ticketId))
+        {
+            handler->SendSysMessage("This ticket is being saved. Please try again in a moment.");
+            return true;
+        }
+
         GmTicket* ticket = sTicketMgr->GetTicket(ticketId);
         if (!ticket || ticket->IsClosed() || ticket->IsCompleted())
         {
@@ -416,6 +464,12 @@ public:
         }
 
         // Ticket must exist
+        if (sTicketMgr->IsWritePending(guid))
+        {
+            handler->SendSysMessage("This ticket is being saved. Please try again in a moment.");
+            return true;
+        }
+
         GmTicket* ticket = sTicketMgr->GetTicketByPlayer(guid);
         if (!ticket)
         {
@@ -435,6 +489,12 @@ public:
     {
         if (response.empty())
             return false;
+
+        if (sTicketMgr->IsWritePending(ticketId))
+        {
+            handler->SendSysMessage("This ticket is being saved. Please try again in a moment.");
+            return true;
+        }
 
         GmTicket* ticket = sTicketMgr->GetTicket(ticketId);
         if (!ticket || ticket->IsClosed())
@@ -484,6 +544,12 @@ public:
 
     static bool HandleGMTicketResponseDeleteCommand(ChatHandler* handler, uint32 ticketId)
     {
+        if (sTicketMgr->IsWritePending(ticketId))
+        {
+            handler->SendSysMessage("This ticket is being saved. Please try again in a moment.");
+            return true;
+        }
+
         GmTicket* ticket = sTicketMgr->GetTicket(ticketId);
         // Don't allow deleting response for a closed ticket.
         if (!ticket || ticket->IsClosed())

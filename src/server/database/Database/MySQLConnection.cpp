@@ -364,9 +364,9 @@ bool MySQLConnection::_Query(std::string_view sql, MySQLResult** pResult, MySQLF
     return true;
 }
 
-void MySQLConnection::BeginTransaction()
+bool MySQLConnection::BeginTransaction()
 {
-    Execute("START TRANSACTION");
+    return Execute("START TRANSACTION");
 }
 
 void MySQLConnection::RollbackTransaction()
@@ -374,9 +374,9 @@ void MySQLConnection::RollbackTransaction()
     Execute("ROLLBACK");
 }
 
-void MySQLConnection::CommitTransaction()
+bool MySQLConnection::CommitTransaction()
 {
-    Execute("COMMIT");
+    return Execute("COMMIT");
 }
 
 int MySQLConnection::ExecuteTransaction(std::shared_ptr<TransactionBase> transaction)
@@ -385,7 +385,22 @@ int MySQLConnection::ExecuteTransaction(std::shared_ptr<TransactionBase> transac
     if (queries.empty())
         return -1;
 
-    BeginTransaction();
+    // A lost connection ends the transaction. Replaying one statement on a
+    // new autocommit connection cannot resume it. Restore this flag even on
+    // an early return/exception; whole-transaction deadlock retries remain
+    // the caller's responsibility.
+    struct TransactionGuard
+    {
+        bool& active;
+        explicit TransactionGuard(bool& value) : active(value) { active = true; }
+        ~TransactionGuard() { active = false; }
+    } guard(_transactionActive);
+
+    if (!BeginTransaction())
+    {
+        uint32 errorCode = GetLastError();
+        return errorCode ? int(errorCode) : -1;
+    }
 
     for (auto const& data : queries)
     {
@@ -412,7 +427,7 @@ int MySQLConnection::ExecuteTransaction(std::shared_ptr<TransactionBase> transac
                     LOG_WARN("sql.sql", "Transaction aborted. {} queries not executed.", queries.size());
                     int errorCode = GetLastError();
                     RollbackTransaction();
-                    return errorCode;
+                    return errorCode ? errorCode : -1;
                 }
             }
             break;
@@ -437,7 +452,7 @@ int MySQLConnection::ExecuteTransaction(std::shared_ptr<TransactionBase> transac
                     LOG_WARN("sql.sql", "Transaction aborted. {} queries not executed.", queries.size());
                     uint32 errorCode = GetLastError();
                     RollbackTransaction();
-                    return errorCode;
+                    return errorCode ? int(errorCode) : -1;
                 }
             }
             break;
@@ -449,7 +464,14 @@ int MySQLConnection::ExecuteTransaction(std::shared_ptr<TransactionBase> transac
     // This is done in calling functions DatabaseWorkerPool<T>::DirectCommitTransaction and TransactionTask::Execute,
     // and not while iterating over every element.
 
-    CommitTransaction();
+    if (!CommitTransaction())
+    {
+        // A missing COMMIT reply can have an unknown outcome. Return failure,
+        // never success; idempotent callers must verify their persisted key.
+        uint32 errorCode = GetLastError();
+        RollbackTransaction();
+        return errorCode ? int(errorCode) : -1;
+    }
     return 0;
 }
 
@@ -554,6 +576,10 @@ PreparedResultSet* MySQLConnection::Query(PreparedStatementBase* stmt)
 
 bool MySQLConnection::_HandleMySQLErrno(uint32 errNo, char const* err, uint8 attempts /*= 5*/)
 {
+    if (_transactionActive && (errNo == CR_SERVER_GONE_ERROR ||
+        errNo == CR_SERVER_LOST || errNo == CR_SERVER_LOST_EXTENDED ||
+        errNo == CR_CONN_HOST_ERROR))
+        return false;
     std::string str = "";
     switch (errNo)
     {

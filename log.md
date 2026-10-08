@@ -5,6 +5,8 @@
 
 ## Custom changes (project-specific)
 
+- 2026-10-08 — fix(Core/Unit): `Unit::Kill` runs only once per victim at a time (`3559bb45e`). The victim keeps its health until `setDeathState`, so a KILL/KILLED/DEATH proc that damages the dying unit re-entered `Kill` through `DealDamage` - loot, rewards and procs again, without end when the proc cannot miss. Forgotten Talents 120830 → 120831 did this: the production crash of 2026-10-04 (stack overflow on the map thread). A thread-local set of victims in `Kill` returns the nested call. T1: bot runs 383 (unfixed: 7 re-entries until a miss), 384 (unfixed: crash at the killing blow), 385 (fixed: PASS) - share-public `python_scripts/fl_content/tests/core_kill_reentry.tbs`. Host: vault MIG-088.
+
 - 2026-10-08 — fix(Core/Tickets): `.ticket delete` read the ticket after `TicketMgr::RemoveTicket` deleted it (`UpdateLastChange` → `OnTicketUpdateLastChange`, which mod-ale pushes into Lua, and `GetPlayer`). The player is read and the hook runs first, then the ticket is removed (`7dab1a844`, `cs_ticket.cpp`). Still in upstream. T1: bot run 370 `core_ticket_delete` (share-public `python_scripts/fl_content/tests`). Host: vault MIG-088.
 
 - 2026-10-04 — fix(DB/Tickets): Explicit unsigned binary integer results for all four player-report receipt fields. MySQL's mixed unsigned BIGINT/signed COALESCE returns NEWDECIMAL; interpreting its prepared ASCII zero as uint64 falsely acknowledges an absent report. Actual native run338 failed6/3 with no new report/ticket rows; preserve that result. Companion module uses uint64 getters and validates stored ticket identity before narrowing. Isolated real MySQL prepared-result metadata/value proof; corrected native acceptance remains pending.

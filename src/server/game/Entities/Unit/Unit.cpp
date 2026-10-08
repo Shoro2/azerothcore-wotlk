@@ -76,6 +76,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <unordered_set>
 
 float baseMoveSpeed[MAX_MOVE_TYPE] =
 {
@@ -14261,6 +14262,21 @@ void Unit::Kill(Unit* killer, Unit* victim, bool durabilityLoss, WeaponAttackTyp
     // Prevent killing unit twice (and giving reward from kill twice)
     if (!victim->GetHealth())
         return;
+
+    // The victim keeps its health until setDeathState below, so damage that a
+    // KILL, KILLED or DEATH proc deals to the dying unit reaches Kill again, and
+    // every pass rebuilds loot and rewards and procs once more. A proc that hits
+    // the dying unit (Forgotten Talents' Executioner's Oath Milestone, 120830 ->
+    // 120831) recursed this way until the map thread ran out of stack.
+    static thread_local std::unordered_set<Unit const*> unitsBeingKilled;
+    if (!unitsBeingKilled.insert(victim).second)
+        return;
+
+    struct KillInProgress
+    {
+        Unit const* Victim;
+        ~KillInProgress() { unitsBeingKilled.erase(Victim); }
+    } const killInProgress{ victim };
 
     if (killer && !killer->IsInMap(victim))
         killer = nullptr;

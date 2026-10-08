@@ -282,10 +282,13 @@ public:
         std::string msg = ticket->FormatMessageString(*handler, nullptr, nullptr, nullptr, handler->GetSession() ? handler->GetSession()->GetPlayer()->GetName().c_str() : "Console");
         handler->SendGlobalGMSysMessage(msg.c_str());
 
-        sTicketMgr->RemoveTicket(ticket->GetId());
+        // RemoveTicket deletes the ticket: read the player and run the
+        // last-change hook while the object is still alive.
+        Player* player = ticket->GetPlayer();
         sTicketMgr->UpdateLastChange(ticket);
+        sTicketMgr->RemoveTicket(ticketId);
 
-        if (Player* player = ticket->GetPlayer())
+        if (player)
         {
             // Force abandon ticket
             WorldPacket data(SMSG_GMTICKET_DELETETICKET, 4);

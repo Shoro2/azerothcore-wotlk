@@ -5,6 +5,8 @@
 
 ## Custom changes (project-specific)
 
+- 2026-10-08 — fix(Core/Tickets): `.ticket delete` read the ticket after `TicketMgr::RemoveTicket` deleted it (`UpdateLastChange` → `OnTicketUpdateLastChange`, which mod-ale pushes into Lua, and `GetPlayer`). The player is read and the hook runs first, then the ticket is removed (`7dab1a844`, `cs_ticket.cpp`). Still in upstream. T1: bot run 370 `core_ticket_delete` (share-public `python_scripts/fl_content/tests`). Host: vault MIG-088.
+
 - 2026-10-04 — fix(DB/Tickets): Explicit unsigned binary integer results for all four player-report receipt fields. MySQL's mixed unsigned BIGINT/signed COALESCE returns NEWDECIMAL; interpreting its prepared ASCII zero as uint64 falsely acknowledges an absent report. Actual native run338 failed6/3 with no new report/ticket rows; preserve that result. Companion module uses uint64 getters and validates stored ticket identity before narrowing. Isolated real MySQL prepared-result metadata/value proof; corrected native acceptance remains pending.
 
 - 2026-10-04 — fix(Core/Accounts): Refuse account deletion before hooks/kicks/character or auth-row removal if any account character has a pending linked report; guard explicit character erase before kick/success message. Reuse the existing character query/result, no added queries/API. Prevent account deletion from continuing after central void DeleteFromDB deferral. Source-derived isolated lifecycle proof and syntax checks; no existing test account/character deletion fixture.

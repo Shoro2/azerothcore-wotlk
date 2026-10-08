@@ -4,14 +4,14 @@
 
 ## Top level (excerpt)
 
-FL linked reports (2026-10-04): the companion `modules/mod-fl-player-reports`
-owns `fl_player_report`, addon files and callbacks. CharacterDatabase declares
-the two prepared statements. The receipt's four numeric outputs use CAST AS
-UNSIGNED (binary uint64); plain mixed unsigned BIGINT/signed COALESCE yields
-incompatible prepared decimal text. TicketMgr holds a world-thread pending-player
-set and native tickets. The additive characters schema is a startup prerequisite
-for the patched core and remains during rollback. No world/DBC/client layout
-change is required.
+FL player reports (2026-10-04, decoupled from GM tickets 2026-10-08): the companion
+`modules/mod-fl-player-reports` owns `fl_player_report`, addon files and callbacks.
+CharacterDatabase declares its two prepared statements: the insert (24 parameters;
+the historical `TicketId`/`TicketCreateTime` link is written as 0) and the receipt,
+whose one Id output uses CAST AS UNSIGNED (binary uint64; a mixed unsigned
+BIGINT/signed COALESCE yields prepared decimal text). TicketMgr carries no report
+state. The additive characters schema is a startup prerequisite for this core and
+remains during rollback. No world/DBC/client layout change is required.
 
 ```
 azerothcore-wotlk/

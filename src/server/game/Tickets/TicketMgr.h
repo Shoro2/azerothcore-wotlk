@@ -21,7 +21,6 @@
 #include "CharacterCache.h"
 #include "ObjectMgr.h"
 #include <string>
-#include <set>
 
 class ChatHandler;
 
@@ -100,8 +99,6 @@ public:
     bool IsAssignedNotTo(ObjectGuid guid) const { return IsAssigned() && !IsAssignedTo(guid); }
 
     uint32 GetId() const { return _id; }
-    ObjectGuid GetPlayerGuid() const { return _playerGuid; }
-    uint64 GetCreateTime() const { return _createTime; }
     Player* GetPlayer() const { return ObjectAccessor::FindConnectedPlayer(_playerGuid); }
     std::string const& GetPlayerName() const { return _playerName; }
     std::string const& GetMessage() const { return _message; }
@@ -225,14 +222,6 @@ public:
     }
 
     void AddTicket(GmTicket* ticket);
-    // World-thread lease for a linked asynchronous write. Native mutations
-    // must wait for its completion; readers can still see the old ticket.
-    bool BeginPendingWrite(ObjectGuid playerGuid);
-    bool IsWritePending(ObjectGuid playerGuid) const;
-    bool IsWritePending(uint32 ticketId) const;
-    bool HasPendingWrites() const { return !_pendingWrites.empty(); }
-    void EndPendingWrite(ObjectGuid playerGuid);
-    void PublishCommittedTicket(GmTicket* ticket);
     void CloseTicket(uint32 ticketId, ObjectGuid source = ObjectGuid::Empty);
     void ResolveAndCloseTicket(uint32 ticketId, ObjectGuid source); // used when GM resolves a ticket by simply closing it
     void RemoveTicket(uint32 ticketId);
@@ -260,7 +249,6 @@ protected:
     void _RemoveTicket(uint32 ticketId, int64 source = -1, bool permanently = false);
 
     GmTicketList _ticketList;
-    std::set<ObjectGuid> _pendingWrites;
 
     bool   _status;
     uint32 _lastTicketId;

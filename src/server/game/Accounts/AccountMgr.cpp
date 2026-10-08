@@ -24,10 +24,8 @@
 #include "Realm.h"
 #include "SRP6.h"
 #include "ScriptMgr.h"
-#include "TicketMgr.h"
 #include "Util.h"
 #include "WorldSession.h"
-#include <vector>
 
 AccountMgr::AccountMgr() { }
 
@@ -116,39 +114,30 @@ AccountOpResult AccountMgr::DeleteAccount(uint32 accountId)
     if (!result)
         return AOR_NAME_NOT_EXIST;
 
+    sScriptMgr->OnBeforeAccountDelete(accountId);
+
     // Obtain accounts characters
     CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARS_BY_ACCOUNT_ID);
     stmt->SetData(0, accountId);
 
     result = CharacterDatabase.Query(stmt);
 
-    std::vector<ObjectGuid> characters;
     if (result)
     {
         do
         {
             ObjectGuid guid = ObjectGuid::Create<HighGuid::Player>((*result)[0].Get<uint32>());
-            if (sTicketMgr->IsWritePending(guid))
-            {
-                LOG_WARN("entities.player", "Account {} deletion deferred: character {} has a pending linked report; retry after persistence resolves", accountId, guid.GetCounter());
-                return AOR_DB_INTERNAL_ERROR;
-            }
-            characters.push_back(guid);
-        } while (result->NextRow());
-    }
 
-    // Read/check every GUID before any potentially destructive hook or kick.
-    // The central void DeleteFromDB guard cannot stop account-row deletion.
-    sScriptMgr->OnBeforeAccountDelete(accountId);
-    for (ObjectGuid guid : characters)
-    {
-        if (Player* p = ObjectAccessor::FindPlayer(guid))
-        {
-            WorldSession* s = p->GetSession();
-            s->KickPlayer("Delete account");
-            s->LogoutPlayer(false);
-        }
-        Player::DeleteFromDB(guid.GetCounter(), accountId, false, true);
+            // Kick if player is online
+            if (Player* p = ObjectAccessor::FindPlayer(guid))
+            {
+                WorldSession* s = p->GetSession();
+                s->KickPlayer("Delete account");            // mark session to remove at next session list update
+                s->LogoutPlayer(false);                     // logout player without waiting next session list update
+            }
+
+            Player::DeleteFromDB(guid.GetCounter(), accountId, false, true);       // no need to update realm characters
+        } while (result->NextRow());
     }
 
     // table realm specific but common for all characters of account for realm

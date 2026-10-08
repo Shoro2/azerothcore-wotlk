@@ -43,7 +43,6 @@
 #include "Opcodes.h"
 #include "Pet.h"
 #include "Player.h"
-#include "TicketMgr.h"
 #include "PlayerDump.h"
 #include "QueryHolder.h"
 #include "RaceMgr.h"
@@ -616,13 +615,6 @@ void WorldSession::HandleCharDeleteOpcode(WorldPacket& recvData)
 {
     ObjectGuid guid;
     recvData >> guid;
-
-    if (sTicketMgr->IsWritePending(guid))
-    {
-        sScriptMgr->OnPlayerFailedDelete(guid, GetAccountId());
-        SendCharDelete(CHAR_DELETE_FAILED);
-        return;
-    }
 
     // Initiating
     uint32 initAccountId = GetAccountId();

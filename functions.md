@@ -143,32 +143,22 @@ Category convention: for custom modules use `mod-<name>` as the category.
 
 ## Known custom pain points
 
-### Linked player-report writes (FL, 2026-10-04)
+### Checked transaction boundaries (FL, 2026-10-04)
 
-`TicketMgr::BeginPendingWrite` / `EndPendingWrite` own a world-thread character
-lease. Native client/GM mutations and character deletion refuse while pending;
-pure ticket reads remain available. `PublishCommittedTicket` inserts a new
-committed ticket or assigns an existing object in place, releasing the lease.
-
-Account deletion checks every GUID from its existing character query before
-`OnBeforeAccountDelete`, kicks or row deletion; a pending report returns the
-existing internal-error result with a retry log. Explicit `.character erase`
-refuses before kick/success output. The normal account-delete hook now runs after
-the read/pending preflight and before the original deletion sequence. The central
-void `Player::DeleteFromDB` guard remains a final defense.
-
-The module owns async callbacks, receipt verification and any unknown-outcome
-lease. The feature requires `CharacterDatabase.WorkerThreads=1` for FIFO ordering
-against earlier queued native ticket saves; the module fails closed otherwise.
-
-`MySQLConnection::BeginTransaction` and `CommitTransaction` now return their
-Execute result. `ExecuteTransaction` checks both boundaries, captures error
-before rollback and restores a connection-local transaction flag on every exit.
-Transport loss within that scope returns failure without reconnecting/replaying
-one statement into a new autocommit session. Ordinary reconnect and the caller's
+`MySQLConnection::BeginTransaction` and `CommitTransaction` return their Execute
+result. `ExecuteTransaction` checks both boundaries, captures the error before the
+rollback and restores a connection-local transaction flag on every exit. Transport
+loss within that scope returns failure without reconnecting and replaying one
+statement into a new autocommit session (which would apply the rest of a
+transaction without its start). Ordinary reconnect and the caller's
 whole-transaction deadlock retry remain intact. A failed COMMIT reply can be an
-unknown outcome; it does not establish rollback. Linked reports reconcile through
-a player/account/token receipt sentinel and exact native ticket linkage.
+unknown outcome; it does not establish rollback - `mod-fl-player-reports` settles
+it by reading its receipt (player/account/token sentinel) after the callback.
+
+The player-report ticket lease of 2026-10-04 (`TicketMgr::BeginPendingWrite` and
+its guards in the ticket handlers, `.ticket` commands, character and account
+deletion) was removed on 2026-10-08 when reports stopped writing GM tickets; those
+files match upstream again apart from the `.ticket delete` fix.
 
 The companion additive `fl_player_report` table must exist before this core starts:
 `CHAR_INS_FL_PLAYER_REPORT` and `CHAR_SEL_FL_PLAYER_REPORT_RECEIPT` are always

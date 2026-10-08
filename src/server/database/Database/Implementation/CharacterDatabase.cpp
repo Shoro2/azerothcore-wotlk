@@ -700,11 +700,13 @@ void CharacterDatabaseConnection::DoPrepareStatements()
     PrepareStatement(CHAR_SEL_PARAGON_ITEM_LEVEL, "SELECT `paragonLevel` FROM `character_paragon_item` WHERE `itemGuid` = ?", CONNECTION_SYNCH);
     PrepareStatement(CHAR_SEL_PARAGON_LEVEL_BY_CHAR, "SELECT cp.`level` FROM `character_paragon` cp INNER JOIN `characters` c ON c.`account` = cp.`accountID` WHERE c.`guid` = ?", CONNECTION_SYNCH);
 
-    // The companion characters migration precedes statement preparation.
-    PrepareStatement(CHAR_INS_FL_PLAYER_REPORT, "INSERT INTO `fl_player_report` (`Token`, `AccountId`, `PlayerGuid`, `PlayerName`, `Kind`, `TicketId`, `TicketCreateTime`, `CapturedAt`, `SubmittedAt`, `MapId`, `InstanceId`, `ZoneId`, `AreaId`, `PositionX`, `PositionY`, `PositionZ`, `Orientation`, `TargetType`, `TargetEntry`, `TargetGuid`, `TargetName`, `ClientVersion`, `ServerVersion`, `AddonVersion`, `Description`, `AdditionalInfo`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", CONNECTION_ASYNC);
-    // Mixed unsigned BIGINT/signed literals make COALESCE return NEWDECIMAL.
-    // Prepared numeric getters require binary integers, including the absent sentinel.
-    PrepareStatement(CHAR_SEL_FL_PLAYER_REPORT_RECEIPT, "SELECT CAST(COALESCE(r.`Id`, 0) AS UNSIGNED), CAST(COALESCE(r.`TicketId`, 0) AS UNSIGNED), CAST(COALESCE(r.`TicketCreateTime`, 0) AS UNSIGNED), CAST(COALESCE(t.`createTime`, 0) AS UNSIGNED), COALESCE(t.`description`, '') FROM (SELECT 1) AS sentinel LEFT JOIN `fl_player_report` r ON r.`PlayerGuid` = ? AND r.`AccountId` = ? AND r.`Token` = ? LEFT JOIN `gm_ticket` t ON t.`id` = r.`TicketId` AND t.`createTime` = r.`TicketCreateTime`", CONNECTION_ASYNC);
+    // mod-fl-player-reports; its characters migration precedes statement preparation.
+    // Reports are not GM tickets: TicketId/TicketCreateTime keep only the link of reports
+    // filed before the decoupling, new reports store 0.
+    PrepareStatement(CHAR_INS_FL_PLAYER_REPORT, "INSERT INTO `fl_player_report` (`Token`, `AccountId`, `PlayerGuid`, `PlayerName`, `Kind`, `TicketId`, `TicketCreateTime`, `CapturedAt`, `SubmittedAt`, `MapId`, `InstanceId`, `ZoneId`, `AreaId`, `PositionX`, `PositionY`, `PositionZ`, `Orientation`, `TargetType`, `TargetEntry`, `TargetGuid`, `TargetName`, `ClientVersion`, `ServerVersion`, `AddonVersion`, `Description`, `AdditionalInfo`) VALUES (?, ?, ?, ?, ?, 0, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", CONNECTION_ASYNC);
+    // The derived sentinel row makes absence (Id 0) distinct from a failed read (no result).
+    // CAST keeps it a binary integer: COALESCE of unsigned BIGINT and a signed literal is NEWDECIMAL.
+    PrepareStatement(CHAR_SEL_FL_PLAYER_REPORT_RECEIPT, "SELECT CAST(COALESCE(r.`Id`, 0) AS UNSIGNED) FROM (SELECT 1) AS sentinel LEFT JOIN `fl_player_report` r ON r.`PlayerGuid` = ? AND r.`AccountId` = ? AND r.`Token` = ?", CONNECTION_ASYNC);
 }
 
 CharacterDatabaseConnection::CharacterDatabaseConnection(MySQLConnectionInfo& connInfo) : MySQLConnection(connInfo)

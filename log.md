@@ -5,6 +5,9 @@
 
 ## Custom changes (project-specific)
 
+- 2026-10-09 — fix(Core/Vmaps): a BIH ray traversal stops at the size of its node stack — taken from the CoA fork (`7c283aa5`, CoA #6687), the bug is stock AzerothCore. A ray with a zero direction component whose origin lies on a split plane gives NaN split distances; `BIH::intersectRay` then pushed the same node forever and wrote past its 64-entry stack array until the thread stack ended. Host: vault MIG entry of the CoA crash fixes.
+  - affected files: `src/common/Collision/BoundingIntervalHierarchy.h`
+
 - 2026-10-08 — refactor(DB/Tickets): Player reports no longer write GM tickets (operator decision). Removed the 2026-10-04 TicketMgr pending-write lease and every guard it needed (ticket handlers, `.ticket` commands, `Player::DeleteFromDB`, character delete opcode, `.character erase`, `AccountMgr::DeleteAccount` order): those files match upstream again, except the `.ticket delete` fix (`7dab1a844`). `CHAR_INS_FL_PLAYER_REPORT` writes the ticket link as 0 (24 parameters); `CHAR_SEL_FL_PLAYER_REPORT_RECEIPT` returns only the unsigned report Id. The checked START/COMMIT boundaries stay. Companion `mod-fl-player-reports` change required (vault MIG-095).
 
 - 2026-10-08 — fix(Core/Unit): `Unit::Kill` runs only once per victim at a time (`3559bb45e`). The victim keeps its health until `setDeathState`, so a KILL/KILLED/DEATH proc that damages the dying unit re-entered `Kill` through `DealDamage` - loot, rewards and procs again, without end when the proc cannot miss. Forgotten Talents 120830 → 120831 did this: the production crash of 2026-10-04 (stack overflow on the map thread). A thread-local set of victims in `Kill` returns the nested call. T1: bot runs 383 (unfixed: 7 re-entries until a miss), 384 (unfixed: crash at the killing blow), 385 (fixed: PASS) - share-public `python_scripts/fl_content/tests/core_kill_reentry.tbs`. Host: vault MIG-088.

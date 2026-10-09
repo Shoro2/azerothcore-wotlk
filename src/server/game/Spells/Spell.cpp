@@ -8897,7 +8897,12 @@ SpellCastResult Spell::CanOpenLock(uint32 effIndex, uint32 lockId, SkillType& sk
                         if ((m_spellInfo->Effects[effIndex].TargetA.GetTarget() == TARGET_GAMEOBJECT_ITEM_TARGET || m_spellInfo->Effects[effIndex].TargetB.GetTarget() == TARGET_GAMEOBJECT_ITEM_TARGET)
                             && !m_spellInfo->IsAbilityOfSkillType(SKILL_LOCKPICKING))
                         {
-                            skillValue += m_spellInfo->Effects[effIndex].CalcValue();
+                            // FL: the caster's level, modifiers and scripts reach this bonus only for an Ascension
+                            // class (CoA 58323f05 passes the caster for every spell). A stock class keeps the flat
+                            // bonus; Khadgar's Unlocking and Decipher would otherwise scale with its level.
+                            WorldObject const* bonusCaster = unitCaster && unitCaster->IsPlayer() &&
+                                IsAscensionClass(unitCaster->getClass()) ? m_caster : nullptr;
+                            skillValue += m_spellInfo->Effects[effIndex].CalcValue(bonusCaster);
                         }
 
                         if (skillValue < reqSkillValue)

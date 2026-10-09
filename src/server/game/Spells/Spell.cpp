@@ -8894,15 +8894,18 @@ SpellCastResult Spell::CanOpenLock(uint32 effIndex, uint32 lockId, SkillType& sk
 
                         // skill bonus provided by casting spell (mostly item spells)
                         // add the effect base points modifier from the spell casted (cheat lock / skeleton key etc.)
-                        if ((m_spellInfo->Effects[effIndex].TargetA.GetTarget() == TARGET_GAMEOBJECT_ITEM_TARGET || m_spellInfo->Effects[effIndex].TargetB.GetTarget() == TARGET_GAMEOBJECT_ITEM_TARGET)
-                            && !m_spellInfo->IsAbilityOfSkillType(SKILL_LOCKPICKING))
+                        SpellEffectInfo const& effect = m_spellInfo->Effects[effIndex];
+                        bool const hasClassLockBonus = m_spellInfo->Id == 570122 || m_spellInfo->Id == 804662;
+                        if ((effect.TargetA.GetTarget() == TARGET_GAMEOBJECT_ITEM_TARGET ||
+                            effect.TargetB.GetTarget() == TARGET_GAMEOBJECT_ITEM_TARGET) &&
+                            (!m_spellInfo->IsAbilityOfSkillType(SKILL_LOCKPICKING) || hasClassLockBonus))
                         {
                             // FL: the caster's level, modifiers and scripts reach this bonus only for an Ascension
                             // class (CoA 58323f05 passes the caster for every spell). A stock class keeps the flat
                             // bonus; Khadgar's Unlocking and Decipher would otherwise scale with its level.
                             WorldObject const* bonusCaster = unitCaster && unitCaster->IsPlayer() &&
                                 IsAscensionClass(unitCaster->getClass()) ? m_caster : nullptr;
-                            skillValue += m_spellInfo->Effects[effIndex].CalcValue(bonusCaster);
+                            skillValue += effect.CalcValue(bonusCaster);
                         }
 
                         if (skillValue < reqSkillValue)

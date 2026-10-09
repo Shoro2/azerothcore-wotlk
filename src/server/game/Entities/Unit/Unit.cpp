@@ -572,7 +572,40 @@ void Unit::Update(uint32 p_time)
     m_combatManager.Update(p_time);
 
     _lastDamagedTargetGuid = ObjectGuid::Empty;
-    if (_lastExtraAttackSpell)
+    // FL: CoA's delivery (341e49df) is limited to the Ascension classes and the units they control. Every other unit
+    // keeps the stock delivery below, which drops an entry whose victim is out of reach.
+    Player const* extraAttacksPlayer = extraAttacksTargets.empty() ? nullptr : GetCharmerOrOwnerPlayerOrPlayerItself();
+    if (extraAttacksPlayer && IsAscensionClass(extraAttacksPlayer->getClass()))
+    {
+        // Extra attacks are queued by the spell that grants them and delivered as soon as the victim can
+        // actually be struck. Cruel Intent queues them while its Lunge is still in flight, so an entry
+        // that is out of reach yet is kept for a later update instead of being dropped with the jump.
+        for (auto itr = extraAttacksTargets.begin(); itr != extraAttacksTargets.end();)
+        {
+            ObjectGuid targetGuid = itr->first;
+            uint32 count = itr->second;
+            Unit* victim = ObjectAccessor::GetUnit(*this, targetGuid);
+            if (!victim || !victim->IsAlive())
+            {
+                itr = extraAttacksTargets.erase(itr);
+                continue;
+            }
+
+            if (_lastExtraAttackSpell != SPELL_SWORD_SPECIALIZATION && _lastExtraAttackSpell != SPELL_HACK_AND_SLASH
+                && !victim->IsWithinMeleeRange(this))
+            {
+                ++itr;
+                continue;
+            }
+
+            itr = extraAttacksTargets.erase(itr);
+            HandleProcExtraAttackFor(victim, count);
+        }
+
+        if (extraAttacksTargets.empty())
+            _lastExtraAttackSpell = 0;
+    }
+    else if (_lastExtraAttackSpell)
     {
         while (!extraAttacksTargets.empty())
         {
@@ -3025,17 +3058,23 @@ void Unit::HandleProcExtraAttackFor(Unit* victim, uint32 count)
     }
 }
 
-void Unit::AddExtraAttacks(uint32 count)
+void Unit::AddExtraAttacks(uint32 count, ObjectGuid const& target)
 {
-    ObjectGuid targetGUID = _lastDamagedTargetGuid;
+    // A spell that was triggered at a specific enemy (Cruel Intent's Lunge trigger) names the
+    // victim itself; only when it does not is the last melee hit or the current selection used.
+    ObjectGuid targetGUID = target;
     if (!targetGUID)
     {
-        if (ObjectGuid selection = GetTarget())
+        targetGUID = _lastDamagedTargetGuid;
+        if (!targetGUID)
         {
-            targetGUID = selection; // Spell was cast directly (not triggered by aura)
+            if (ObjectGuid selection = GetTarget())
+            {
+                targetGUID = selection; // Spell was cast directly (not triggered by aura)
+            }
+            else
+                return;
         }
-        else
-            return;
     }
 
     extraAttacksTargets[targetGUID] += count;

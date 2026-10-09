@@ -5278,7 +5278,17 @@ void Spell::EffectAddExtraAttacks(SpellEffIndex effIndex)
         return;
     }
 
-    unitTarget->AddExtraAttacks(damage);
+    // A proc trigger can name the enemy the extra attacks are meant for while the effect itself
+    // lands on the caster (Cruel Intent casts 707599 at the Lunged target, whose effect target is
+    // the caster). That explicit victim is preferred over the last melee hit or a selection.
+    // FL: limited to the Ascension classes and the units they control (341e49df names the victim for every unit);
+    // every other unit keeps the stock choice of the last melee hit or the selection.
+    Player const* extraAttacksPlayer = unitTarget->GetCharmerOrOwnerPlayerOrPlayerItself();
+    Unit* strikeTarget = extraAttacksPlayer && IsAscensionClass(extraAttacksPlayer->getClass()) ?
+        m_targets.GetUnitTarget() : nullptr;
+    unitTarget->AddExtraAttacks(damage,
+        strikeTarget && strikeTarget != unitTarget && strikeTarget->IsAlive() ?
+            strikeTarget->GetGUID() : ObjectGuid::Empty);
 
     ExecuteLogEffectExtraAttacks(effIndex, unitTarget, damage);
 }

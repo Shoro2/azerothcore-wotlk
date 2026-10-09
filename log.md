@@ -5,6 +5,30 @@
 
 ## Custom changes (project-specific)
 
+- 2026-10-09 — CoA catch-up round 4, the core picks (CU4-WP5, branch `claude/coa-round4-ad93e862`, 22 code commits on `f793ad439` up to `ee8b8a3ec`, 20 files +288/−47, then this entry; plan `ForgottenLand2.0/tools/coa-program/cu4-plan-report.md` §3) — the `UnitScript` hook `OnBeforeHealAbsorb` plus 21 CoA commits of `10fa1627f6..fc359be9` that the kept class code needs or that fix our classes, each with the CoA commit and PR in its message. Lines marked `// FL:` limit a CoA rule to the Ascension classes (or the units they own or charm), so the ten stock classes keep stock behaviour; CoA's `m_caster`-as-Unit reads `unitCaster` (AzerothCore #27627). Deliberate stock fixes: `d1b95282`, `f212136d`, `c34555c4` (Pet.cpp), `cbf82dc0` (summon decline). Not taken: the optional `b71e5b58`, every Hero/Wildcard/Paths part, CoA's silent-swap machinery. Host: vault MIG entry of round 4's core pull (WP-10).
+  - `cbf82dc0` (#6949): Pulverize Reset 802895 also clears Ram's category; a declined summon always clears the pending request (stock fix)
+  - `44409572` (#6884, hand port): a Sun Cleric's off-hand two-hander is unequipped when Valkyr's Grip 707072 goes; the Hero Titan's Grip parts cut
+  - `feaef178` (#6919, SpellInfo.cpp only): the Artificer's Wand 561284/561354-561357 keeps its data cast time, united with our NPC Volley limit
+  - `340294d3` (#6773): a mechanical under Control Mechanical 807846 uses pet AI
+  - `80361ef4` (#6808, lock hunk only): Smash Lock 570122 and Melt Lock 804662 keep their lock bonus after Lockpicking is learned
+  - `c34555c4` (#6822, Pet.cpp only): an abandoned pet is deleted from the database even while it loads (stock fix)
+  - `58323f05` (#6811, Spell.cpp only): the open-lock bonus scales from the caster - FL: only for an Ascension class
+  - `20451dd9` (#6793, hand port): Hellknight 800703 movement per stack in `Unit::UpdateSpeed`
+  - `36a3d8b5` (#6608, core half): a charged spell (`MaxCharges`, families 18-38 only) recovers through its charges, not its DBC category cooldown
+  - `341e49df` (#6526, core half): Dark Frenzy's GCD rule, deferred extra attacks at a named victim, `RuntimeExcludeCasterAuraSpell` - FL: the GCD and extra-attack rules only for the Ascension classes
+  - `9bf73a95` (#6436): Wind Surge 805750 adds jump targets to Air Engraving's copy 653226
+  - `eb9959e6` (#6413): a friendly target that only receives positive effects cannot miss - FL: only for Ascension-class casters
+  - `4b0adf33` (#6015, helper only): `Unit::IsImmuneToForcedMovement`; `KnockbackFrom` stays stock
+  - `f212136d` (#6157): `RemoveAppliedAuras` removes each applied aura once (stock safety fix)
+  - `ae10c347` (#6209), `8493cbf7` (#5986): the periodic-heal multiplier exempts 680693 and 561231
+  - `d1b95282` (#6148): a dead player keeps 0 health through power resets and health auras (stock fix, AzerothCore #27885)
+  - `7498750f` (#5964): a two-hander in the off-hand satisfies an off-hand weapon spell (Valkyr's Grip)
+  - `8037cdbf` (#5908, core part): `MoveJump` with an optional final orientation, `Spell::SetJumpFinalOrientation`
+  - `57410f0e` (#5901): Gatling Gun shoots the gun inside the Mechsuit; `FORM_TINKER_MECHSUIT`
+  - `0540151f` (#5891): the Mechsuit helper 803451 passes a no-mount instance
+  - `70f8774c` (#4542, hook only): `UNITHOOK_ON_BEFORE_HEAL_ABSORB` / `OnBeforeHealAbsorb` at the top of `Unit::CalcHealAbsorb` (Infuse in the kept Bloodmage Talents)
+  - affected files: `Entities/Item/Item.cpp`, `Entities/Pet/Pet.cpp`, `Entities/Player/Player.cpp`, `Entities/Unit/StatSystem.cpp`, `Entities/Unit/Unit.cpp`, `Entities/Unit/Unit.h`, `Entities/Unit/UnitDefines.h`, `Handlers/MovementHandler.cpp`, `Movement/MotionMaster.cpp`, `Movement/MotionMaster.h`, `Scripting/ScriptDefines/UnitScript.cpp`, `Scripting/ScriptDefines/UnitScript.h`, `Scripting/ScriptMgr.h`, `Spells/AscensionPooledVitality.h`, `Spells/Auras/SpellAuraEffects.cpp`, `Spells/Spell.cpp`, `Spells/Spell.h`, `Spells/SpellEffects.cpp`, `Spells/SpellInfo.cpp`, `Spells/SpellInfoCorrections.cpp` (all under `src/server/game/`)
+
 - 2026-10-09 — fix(Core/Vmaps): a BIH ray traversal stops at the size of its node stack — taken from the CoA fork (`7c283aa5`, CoA #6687), the bug is stock AzerothCore. A ray with a zero direction component whose origin lies on a split plane gives NaN split distances; `BIH::intersectRay` then pushed the same node forever and wrote past its 64-entry stack array until the thread stack ended. Host: vault MIG entry of the CoA crash fixes.
   - affected files: `src/common/Collision/BoundingIntervalHierarchy.h`
 

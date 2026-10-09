@@ -1553,7 +1553,7 @@ void Spell::EffectJumpDest(SpellEffIndex effIndex)
     {
         player->SetCanTeleport(true);
     }
-    unitCaster->GetMotionMaster()->MoveJump(x, y, z, speedXY, speedZ);
+    unitCaster->GetMotionMaster()->MoveJump(x, y, z, speedXY, speedZ, 0, nullptr, m_jumpFinalOrientation);
 
     if (unitCaster->IsPlayer())
     {

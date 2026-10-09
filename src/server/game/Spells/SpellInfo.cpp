@@ -3025,9 +3025,10 @@ uint32 SpellInfo::CalcCastTime(WorldObject* caster, Spell* spell) const
 
     int32 castTime = serpent ? 1000 : CastTimeEntry->CastTime;
     // Ascension channels ranged-slot spells without a base cast time, such as Tinker's Gatling Gun, at once.
+    bool const artificersWand = SpellFamilyName == 28 && (Id == 561284 || (Id >= 561354 && Id <= 561357));
     // FL: only in the Ascension class families; a stock channel (NPC Volley, Machine Gun) keeps its 500 ms.
-    if (HasAttribute(SPELL_ATTR0_USES_RANGED_SLOT) && (!IsAutoRepeatRangedSpell()) &&
-        (castTime || !IsChanneled() || SpellFamilyName <= SPELLFAMILY_PET))
+    if (HasAttribute(SPELL_ATTR0_USES_RANGED_SLOT) && !artificersWand &&
+        (!IsAutoRepeatRangedSpell()) && (castTime || !IsChanneled() || SpellFamilyName <= SPELLFAMILY_PET))
         castTime += 500;
 
     if (caster)

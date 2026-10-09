@@ -948,6 +948,33 @@ void Spell::SelectSpellTargets()
         }
     }
 
+    // FL: CoA (eb9959e6) lets no caster miss a friendly target with only positive effects. Limited here to the
+    // Ascension classes and the units they control: a stock class keeps the stock hit roll on a friendly target of a
+    // spell that also has a harmful effect.
+    Unit* unitCaster = m_caster->ToUnit();
+    Player const* ascensionCaster = m_originalCaster ? m_originalCaster->GetCharmerOrOwnerPlayerOrPlayerItself() : nullptr;
+    if (m_originalCaster && ascensionCaster && IsAscensionClass(ascensionCaster->getClass()))
+        for (TargetInfo& targetInfo : m_UniqueTargetInfo)
+        {
+            if (targetInfo.missCondition != SPELL_MISS_MISS || !targetInfo.effectMask)
+                continue;
+
+            bool positiveEffects = true;
+            for (uint8 index = 0; index < MAX_SPELL_EFFECTS; ++index)
+                if ((targetInfo.effectMask & (1u << index)) && !m_spellInfo->IsPositiveEffect(index))
+                {
+                    positiveEffects = false;
+                    break;
+                }
+            if (!positiveEffects)
+                continue;
+
+            Unit* target = targetInfo.targetGUID == m_caster->GetGUID() ? unitCaster
+                : ObjectAccessor::GetUnit(*m_caster, targetInfo.targetGUID);
+            if (target && !m_originalCaster->IsHostileTo(target) && !target->IsImmunedToSpell(m_spellInfo, this))
+                targetInfo.missCondition = SPELL_MISS_NONE;
+        }
+
     if (uint64 dstDelay = CalculateDelayMomentForDst())
         m_delayMoment = dstDelay;
 }

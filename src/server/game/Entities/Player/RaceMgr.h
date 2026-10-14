@@ -41,12 +41,23 @@ public:
     static uint32 GetPlayableRaceMask() { return _playableRaceMask; }
     static uint32 GetAllianceRaceMask() { return _allianceRaceMask; }
     static uint32 GetHordeRaceMask() { return _hordeRaceMask; }
+
+    /// Donor race of a race, 0 when it has none (config Races.Donors, "<race>:<donor>" pairs).
+    static uint32 GetDonorRace(uint32 race);
+
+    /// Adds the bit of every donor-backed race to a multi-race mask that carries the donor's bit.
+    /// Masks with fewer than two playable race bits (0, single race) and masks that already carry the race's bit stay as they are.
+    [[nodiscard]] uint32 WidenRaceMask(uint32 mask) const;
 private:
+    static void LoadDonors();
+
     static uint8 _maxRaces; // Max playable race + 1
 
     static uint32 _playableRaceMask;
     static uint32 _allianceRaceMask;
     static uint32 _hordeRaceMask;
+
+    static std::map<uint32, uint32> _donors; // race -> donor race, only playable races with a playable donor
 };
 
 #define sRaceMgr RaceMgr::instance()

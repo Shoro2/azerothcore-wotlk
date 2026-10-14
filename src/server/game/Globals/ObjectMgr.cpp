@@ -3359,6 +3359,7 @@ void ObjectMgr::LoadItemTemplates()
 
     _itemTemplateStore.reserve(result->GetRowCount());
     uint32 count = 0;
+    uint32 widenedRaceMasks = 0;
     // original inspiration https://github.com/TrinityCore/TrinityCore/commit/0c44bd33ee7b42c924859139a9f4b04cf2b91261
     bool enforceDBCAttributes = sWorld->getBoolConfig(CONFIG_DBC_ENFORCE_ITEM_ATTRIBUTES);
 
@@ -3385,6 +3386,11 @@ void ObjectMgr::LoadItemTemplates()
         itemTemplate.InventoryType             = uint32(fields[12].Get<uint8>());
         itemTemplate.AllowableClass            = GetItemAllowableClassMask(fields[13].Get<int32>());
         itemTemplate.AllowableRace             = fields[14].Get<int32>();
+        if (uint32 widenedRaceMask = sRaceMgr->WidenRaceMask(itemTemplate.AllowableRace); widenedRaceMask != itemTemplate.AllowableRace)
+        {
+            itemTemplate.AllowableRace = widenedRaceMask;
+            ++widenedRaceMasks;
+        }
         itemTemplate.ItemLevel                 = uint32(fields[15].Get<uint16>());
         itemTemplate.RequiredLevel             = uint32(fields[16].Get<uint8>());
         itemTemplate.RequiredSkill             = uint32(fields[17].Get<uint16>());
@@ -3929,6 +3935,7 @@ void ObjectMgr::LoadItemTemplates()
         LOG_ERROR("sql.sql", "Item (Entry: {}) does not exist in `item_template` but is referenced in `CharStartOutfit.dbc`", *itr);
 
     LOG_INFO("server.loading", ">> Loaded {} Item Templates in {} ms", count, GetMSTimeDiffToNow(oldMSTime));
+    LOG_INFO("server.loading", ">> Widened `AllowableRace` for donor races in {} Item Templates", widenedRaceMasks);
     LOG_INFO("server.loading", " ");
 }
 
@@ -5128,11 +5135,17 @@ void ObjectMgr::LoadQuests()
     // create multimap previous quest for each existed quest
     // some quests can have many previous maps set by NextQuestId in previous quest
     // for example set of race quests can lead to single not race specific quest
+    uint32 widenedRaceMasks = 0;
     do
     {
         Field* fields = result->Fetch();
 
         Quest* newQuest = new Quest(fields);
+        if (uint32 widenedRaceMask = sRaceMgr->WidenRaceMask(newQuest->AllowableRaces); widenedRaceMask != newQuest->AllowableRaces)
+        {
+            newQuest->AllowableRaces = widenedRaceMask;
+            ++widenedRaceMasks;
+        }
         _questTemplates[newQuest->GetQuestId()] = newQuest;
     } while (result->NextRow());
 
@@ -5886,6 +5899,7 @@ void ObjectMgr::LoadQuests()
     }
 
     LOG_INFO("server.loading", ">> Loaded {} Quests Definitions in {} ms", (unsigned long)_questTemplates.size(), GetMSTimeDiffToNow(oldMSTime));
+    LOG_INFO("server.loading", ">> Widened `AllowableRaces` for donor races in {} Quests", widenedRaceMasks);
     LOG_INFO("server.loading", " ");
 }
 
@@ -9896,6 +9910,7 @@ void ObjectMgr::LoadMailLevelRewards()
     }
 
     uint32 count = 0;
+    uint32 widenedRaceMasks = 0;
 
     do
     {
@@ -9930,12 +9945,19 @@ void ObjectMgr::LoadMailLevelRewards()
             continue;
         }
 
+        if (uint32 widenedRaceMask = sRaceMgr->WidenRaceMask(raceMask); widenedRaceMask != raceMask)
+        {
+            raceMask = widenedRaceMask;
+            ++widenedRaceMasks;
+        }
+
         _mailLevelRewardStore[level].push_back(MailLevelReward(raceMask, mailTemplateId, senderEntry));
 
         ++count;
     } while (result->NextRow());
 
     LOG_INFO("server.loading", ">> Loaded {} Level Dependent Mail Rewards in {} ms", count, GetMSTimeDiffToNow(oldMSTime));
+    LOG_INFO("server.loading", ">> Widened `raceMask` for donor races in {} Level Dependent Mail Rewards", widenedRaceMasks);
     LOG_INFO("server.loading", " ");
 }
 

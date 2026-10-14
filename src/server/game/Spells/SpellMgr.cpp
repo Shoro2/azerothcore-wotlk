@@ -2872,6 +2872,7 @@ void SpellMgr::LoadSpellAreas()
     }
 
     uint32 count = 0;
+    uint32 widenedRaceMasks = 0;
     do
     {
         Field* fields = result->Fetch();
@@ -2888,6 +2889,13 @@ void SpellMgr::LoadSpellAreas()
         spellArea.raceMask            = fields[7].Get<uint32>();
         spellArea.gender              = Gender(fields[8].Get<uint8>());
         spellArea.autocast            = fields[9].Get<bool>();
+
+        // donor races: widened before the duplicate check so stored and new masks compare alike
+        if (uint32 widenedRaceMask = sRaceMgr->WidenRaceMask(spellArea.raceMask); widenedRaceMask != spellArea.raceMask)
+        {
+            spellArea.raceMask = widenedRaceMask;
+            ++widenedRaceMasks;
+        }
 
         if (SpellInfo const* spellInfo = GetSpellInfo(spell))
         {
@@ -3040,7 +3048,7 @@ void SpellMgr::LoadSpellAreas()
     if (sWorld->getIntConfig(CONFIG_ICC_BUFF_HORDE) > 0)
     {
         LOG_INFO("server.loading", ">> Using ICC Buff Horde: {}", sWorld->getIntConfig(CONFIG_ICC_BUFF_HORDE));
-        SpellArea spellAreaICCBuffHorde = { sWorld->getIntConfig(CONFIG_ICC_BUFF_HORDE), ICC_AREA, 0, 0, 0, ICC_RACEMASK_HORDE, Gender(2), 64, 11, 1 };
+        SpellArea spellAreaICCBuffHorde = { sWorld->getIntConfig(CONFIG_ICC_BUFF_HORDE), ICC_AREA, 0, 0, 0, sRaceMgr->GetHordeRaceMask(), Gender(2), 64, 11, 1 };
         SpellArea const* saICCBuffHorde = &mSpellAreaMap.insert(SpellAreaMap::value_type(sWorld->getIntConfig(CONFIG_ICC_BUFF_HORDE), spellAreaICCBuffHorde))->second;
         mSpellAreaForAreaMap.insert(SpellAreaForAreaMap::value_type(ICC_AREA, saICCBuffHorde));
         ++count;
@@ -3051,7 +3059,7 @@ void SpellMgr::LoadSpellAreas()
     if (sWorld->getIntConfig(CONFIG_ICC_BUFF_ALLIANCE) > 0)
     {
         LOG_INFO("server.loading", ">> Using ICC Buff Alliance: {}", sWorld->getIntConfig(CONFIG_ICC_BUFF_ALLIANCE));
-        SpellArea spellAreaICCBuffAlliance = { sWorld->getIntConfig(CONFIG_ICC_BUFF_ALLIANCE), ICC_AREA, 0, 0, 0, ICC_RACEMASK_ALLIANCE, Gender(2), 64, 11, 1 };
+        SpellArea spellAreaICCBuffAlliance = { sWorld->getIntConfig(CONFIG_ICC_BUFF_ALLIANCE), ICC_AREA, 0, 0, 0, sRaceMgr->GetAllianceRaceMask(), Gender(2), 64, 11, 1 };
         SpellArea const* saICCBuffAlliance = &mSpellAreaMap.insert(SpellAreaMap::value_type(sWorld->getIntConfig(CONFIG_ICC_BUFF_ALLIANCE), spellAreaICCBuffAlliance))->second;
         mSpellAreaForAreaMap.insert(SpellAreaForAreaMap::value_type(ICC_AREA, saICCBuffAlliance));
         ++count;
@@ -3060,6 +3068,7 @@ void SpellMgr::LoadSpellAreas()
         LOG_INFO("server.loading", ">> ICC Buff Alliance: disabled");
 
     LOG_INFO("server.loading", ">> Loaded {} Spell Area Requirements in {} ms", count, GetMSTimeDiffToNow(oldMSTime));
+    LOG_INFO("server.loading", ">> Widened `racemask` for donor races in {} Spell Area Requirements", widenedRaceMasks);
     LOG_INFO("server.loading", " ");
 }
 

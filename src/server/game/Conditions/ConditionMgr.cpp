@@ -1162,6 +1162,7 @@ void ConditionMgr::LoadConditions(bool isReload)
     }
 
     uint32 count = 0;
+    uint32 widenedRaceMasks = 0;
 
     do
     {
@@ -1222,6 +1223,16 @@ void ConditionMgr::LoadConditions(bool isReload)
         {
             delete cond;
             continue;
+        }
+
+        // reference rows keep ConditionType CONDITION_NONE, so this only touches real race conditions
+        if (cond->ConditionType == CONDITION_RACE)
+        {
+            if (uint32 widenedRaceMask = sRaceMgr->WidenRaceMask(cond->ConditionValue1); widenedRaceMask != cond->ConditionValue1)
+            {
+                cond->ConditionValue1 = widenedRaceMask;
+                ++widenedRaceMasks;
+            }
         }
 
         if (iSourceTypeOrReferenceId < 0) // it is a reference template
@@ -1402,6 +1413,7 @@ void ConditionMgr::LoadConditions(bool isReload)
     } while (result->NextRow());
 
     LOG_INFO("server.loading", ">> Loaded {} conditions in {} ms", count, GetMSTimeDiffToNow(oldMSTime));
+    LOG_INFO("server.loading", ">> Widened the race mask for donor races in {} conditions", widenedRaceMasks);
     LOG_INFO("server.loading", " ");
 }
 

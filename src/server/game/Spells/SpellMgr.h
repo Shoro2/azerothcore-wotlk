@@ -517,9 +517,7 @@ typedef std::map<uint32, PetAura> SpellPetAuraMap;
 
 enum ICCBuff
 {
-    ICC_AREA              = 4812,
-    ICC_RACEMASK_HORDE    =  690,
-    ICC_RACEMASK_ALLIANCE = 1101
+    ICC_AREA              = 4812  // the race masks of the buff come from RaceMgr (Horde / Alliance race masks)
 };
 
 struct SpellArea

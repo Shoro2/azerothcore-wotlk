@@ -1996,8 +1996,10 @@ CharacterCreating.Disabled = 0
 #                     32   - (Disabled, Tauren)
 #                     64   - (Disabled, Gnome)
 #                     128  - (Disabled, Troll)
+#                     256  - (Disabled, Goblin, only where ChrRaces.dbc makes the race playable)
 #                     512  - (Disabled, Blood Elf)
 #                     1024 - (Disabled, Draenei)
+#                     2048 - (Disabled, Worgen, only where ChrRaces.dbc makes the race playable)
 
 CharacterCreating.Disabled.RaceMask = 0
 
@@ -2018,6 +2020,23 @@ CharacterCreating.Disabled.RaceMask = 0
 #                     1024 - (Disabled, Druid)
 
 CharacterCreating.Disabled.ClassMask = 0
+
+#
+#    Races.Donors
+#        Description: Donor races of races that ChrRaces.dbc makes playable but that the world database
+#                     knows nothing about (Goblin, Worgen). Space separated "<race>:<donor race>" pairs.
+#                     At load time the core adds the race's bit to every multi-race mask that carries the
+#                     donor's bit: item_template.AllowableRace, quest_template.AllowableRaces,
+#                     spell_area.racemask, conditions of type CONDITION_RACE and mail_level_reward.raceMask.
+#                     Single-race masks keep their meaning. The database rows are not changed. The race also
+#                     starts at its donor's home flight nodes. A pair is used only when both races are
+#                     playable in ChrRaces.dbc. Needs a restart, a reload does not apply it.
+#        Example:     "9:2 12:1" - (Goblin follows Orc, Worgen follows Human)
+#        Default:     "9:2 12:1"
+#                     ""         - (No donors)
+#
+
+Races.Donors = "9:2 12:1"
 
 #
 #    CharactersPerAccount

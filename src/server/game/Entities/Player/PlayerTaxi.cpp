@@ -17,6 +17,7 @@
 
 #include "ObjectMgr.h"
 #include "Player.h"
+#include "RaceMgr.h"
 #include "StringConvert.h"
 #include "Tokenize.h"
 
@@ -34,7 +35,12 @@ void PlayerTaxi::InitTaxiNodesForLevel(uint32 race, uint32 chrClass, uint8 level
     }
 
     // race specific initial known nodes: capital and taxi hub masks
-    switch (race)
+    // a race with a donor race (config Races.Donors, e.g. Goblin -> Orc) starts at its donor's home nodes
+    uint32 homeNodeRace = race;
+    if (uint32 donorRace = sRaceMgr->GetDonorRace(race))
+        homeNodeRace = donorRace;
+
+    switch (homeNodeRace)
     {
         case RACE_HUMAN:
             SetTaximaskNode(2);

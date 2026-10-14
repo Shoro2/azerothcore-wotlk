@@ -2385,7 +2385,15 @@ public:
             case RACE_DRAENEI:
                 raceStr = "Draenei";
                 break;
+            default:
+                // races without a case here (Goblin, Worgen, ...): the name from ChrRaces.dbc
+                if (ChrRacesEntry const* raceEntry = sChrRacesStore.LookupEntry(raceid))
+                    raceStr = raceEntry->name[handler->GetSessionDbcLocale()];
+                break;
         }
+
+        if (raceStr.empty())
+            raceStr = handler->GetAcoreString(LANG_UNKNOWN);
 
         switch (classid)
         {

@@ -965,7 +965,10 @@ struct FactionEntry
 
     [[nodiscard]] bool CanBeSetAtWar() const
     {
-        return reputationListID >= 0 && BaseRepRaceMask[0] == 1791;
+        // 1791 = the ten races of the client's own table (Human..Troll, Blood Elf, Draenei). A faction that all of
+        // them can earn reputation with can be set at war; extra race bits (donor races such as Goblin or Worgen in a
+        // widened Faction.dbc) must not matter, so test containment instead of equality. An unwidened row still counts.
+        return reputationListID >= 0 && (BaseRepRaceMask[0] & 1791) == 1791;
     }
 };
 

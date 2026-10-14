@@ -1672,7 +1672,8 @@ public:
                         pclass = gpd->Class;
                     }
 
-                    if (plevel > 0 && prace > 0 && prace <= RACE_DRAENEI && pclass > 0 && pclass <= CLASS_DRUID)
+                    // EnumUtils<Races> throws std::out_of_range for ids it does not list; the enum covers 1..RACE_WORGEN without gaps
+                    if (plevel > 0 && prace > 0 && prace <= RACE_WORGEN && pclass > 0 && pclass <= CLASS_DRUID)
                     {
                         handler->PSendSysMessage("  {} (GUID {}) - {} - {} - {}{}", name, guid, EnumUtils::ToTitle(Races(prace)), EnumUtils::ToTitle(Classes(pclass)), plevel, (online ? " - [ONLINE]" : ""));
                     }

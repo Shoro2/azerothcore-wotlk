@@ -3120,9 +3120,18 @@ int32 SpellInfo::CalcPowerCost(WorldObject const* caster, SpellSchoolMask school
             case POWER_MANA:
                 powerCost += int32(CalculatePct(UsesMaxManaForCost ? unitCaster->GetMaxPower(POWER_MANA) : unitCaster->GetCreateMana(), ManaCostPercentage));
                 break;
+            case POWER_ENERGY:
+                // CoA 240d032a (#7604, #7703): a percentage Energy cost is charged from base Energy. FL limits it to the
+                // CoA classes - one stock row (62522 Electroshock, an Ulduar vehicle ability) would change - the stock
+                // classes and every creature keep the percentage of their maximum.
+                if (unitCaster->IsPlayer() && IsAscensionClass(unitCaster->getClass()))
+                {
+                    powerCost += int32(CalculatePct(unitCaster->GetCreatePowers(POWER_ENERGY), ManaCostPercentage));
+                    break;
+                }
+                [[fallthrough]];
             case POWER_RAGE:
             case POWER_FOCUS:
-            case POWER_ENERGY:
             case POWER_HAPPINESS:
                 powerCost += int32(CalculatePct(unitCaster->GetMaxPower(Powers(PowerType)), ManaCostPercentage));
                 break;

@@ -914,11 +914,14 @@ void Player::UpdateParryPercentage()
     // No parry
     float value = 0.0f;
     m_realParry = 0.0f;
-    // Starcaller and Primalist need Hunter's parry curve; their general Druid fallback has no parry cap.
     // Sun Cleric's March of the Valkyr uses the Paladin curve with its Strength-based melee scaling.
-    Classes const parryClass = getClass() == CLASS_STARCALLER || getClass() == CLASS_WILDWALKER ? CLASS_HUNTER :
+    // Other custom classes whose legacy fallback has no parry cap (Druid, Priest, Mage, Warlock) use Hunter's curve
+    // (CoA b493c5b8, #7774). A stock class maps to itself and keeps its own cap.
+    Classes parryClass = getClass() == CLASS_STARCALLER || getClass() == CLASS_WILDWALKER ? CLASS_HUNTER :
         getClass() == CLASS_SUN_CLERIC ? CLASS_PALADIN :
         GetLegacyClassForCustomClass(Classes(getClass()));
+    if (parryClass != getClass() && parry_cap[parryClass - 1] <= 0.0f)
+        parryClass = CLASS_HUNTER;
     uint32 const pclass = parryClass - 1;
     if (CanParry() && parry_cap[pclass] > 0.0f)
     {

@@ -492,7 +492,7 @@ void Spell::EffectAscensionModifyAuraDuration(SpellEffIndex effIndex)
     if (!target || !effect.MiscValue)
         return;
 
-    if (Aura* aura = target->GetAura(effect.MiscValue))
+    if (Aura* aura = target->GetAuraOfRankedSpell(effect.MiscValue))
     {
         int32 duration = aura->GetDuration() + damage;
         if (duration <= 0)

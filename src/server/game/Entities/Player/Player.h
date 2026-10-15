@@ -1806,8 +1806,14 @@ public:
     [[nodiscard]] PlayerSpellMap const& GetSpellMap() const { return m_spells; }
     PlayerSpellMap&       GetSpellMap()       { return m_spells; }
     // Transient action replacements; never written to character spell ownership.
-    void SetTemporarySpellReplacement(uint32 original, uint32 replacement);
+    // CoA b7c6b6dd (#6972): `redirect = false` keeps the client-side swap (the button shows `replacement`) but leaves a
+    // cast request for `original` alone, see GetCastReplacement.
+    void SetTemporarySpellReplacement(uint32 original, uint32 replacement, bool redirect = true);
     [[nodiscard]] uint32 GetTemporarySpellReplacement(uint32 original) const;
+    // CoA b7c6b6dd (#6972): the spell the server casts for a client request for `original`. An alias published with
+    // `redirect = false` returns `original` itself (the player may still choose it, e.g. Reclamation while Spirit
+    // Volley is ready); every other live replacement is returned as GetTemporarySpellReplacement does.
+    [[nodiscard]] uint32 GetCastReplacement(uint32 original) const;
     // Forgotten Land: the target of a temporary replacement, which the client is told nothing about until a replacement
     // shows it in its original's place (SMSG_SUPERCEDED_SPELL). LearnHiddenTemporarySpell adds it without
     // SMSG_LEARNED_SPELL and without the rank pass; ForgetHiddenTemporarySpell drops it again, once no live
@@ -2958,6 +2964,9 @@ protected:
     // Forgotten Land: the originals whose replacement the client is shown on its action bar only. SendActionButtons
     // draws the replacement on their buttons; m_actionButtons keeps the original, so no part of the swap is saved.
     std::set<uint32> m_temporarySpellReplacementsOnBar;
+    // CoA b7c6b6dd: the originals whose replacement was set with redirect = false - a cast request for them is not
+    // rewritten (GetCastReplacement). Kept in step with m_temporarySpellReplacements wherever an entry ends or moves.
+    std::set<uint32> m_temporarySpellReplacementKeepsCast;
     // Forgotten Land: the last SMSG_ACTION_BUTTONS was state 2, after which the client ignores every button write
     // until the next state-1 packet (ForgottenLand.exe 0x006D8750, Player_C +0x1954).
     mutable bool m_actionButtonsCleared{false};

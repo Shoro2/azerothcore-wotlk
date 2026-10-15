@@ -3276,6 +3276,7 @@ void Player::TurnBackTemporarySpellReplacementsOf(uint32 spellId)
     {
         EndTemporarySpellReplacementsOnBar(replacement, false);
         m_temporarySpellReplacements.erase(original);
+        m_temporarySpellReplacementKeepsCast.erase(original);
         if (IsInWorld())
             SendTemporarySpellReplacementSupersede(replacement, original);
     }
@@ -3346,6 +3347,9 @@ bool Player::addSpell(uint32 spellId, uint8 addSpecMask, bool updateActive, bool
                         uint32 const replacement = replaced->second;
                         m_temporarySpellReplacements.erase(replaced);
                         m_temporarySpellReplacements[spellInfo->Id] = replacement;
+                        // CoA b7c6b6dd: a redirect = false alias moves to the new rank with its replacement
+                        if (m_temporarySpellReplacementKeepsCast.erase(nextSpellInfo->Id))
+                            m_temporarySpellReplacementKeepsCast.insert(spellInfo->Id);
                     }
                     EndTemporarySpellReplacementsOnBar(nextSpellInfo->Id, false);
                     HandOnTemporarySpellReplacementOnBar(nextSpellInfo->Id, spellInfo->Id, false);
@@ -13963,7 +13967,7 @@ bool Player::CanTitanGrip(ItemTemplate const* weapon) const
         (weapon->SubClass != ITEM_SUBCLASS_WEAPON_POLEARM || commander));
 }
 
-void Player::SetTemporarySpellReplacement(uint32 original, uint32 replacement)
+void Player::SetTemporarySpellReplacement(uint32 original, uint32 replacement, bool redirect /*= true*/)
 {
     auto itr = m_temporarySpellReplacements.find(original);
     uint32 const previous = itr == m_temporarySpellReplacements.end() ? original : itr->second;
@@ -14033,10 +14037,17 @@ void Player::SetTemporarySpellReplacement(uint32 original, uint32 replacement)
     {
         m_temporarySpellReplacements.erase(original);
         m_temporarySpellReplacementsOnBar.erase(original);
+        m_temporarySpellReplacementKeepsCast.erase(original);
     }
     else
     {
         m_temporarySpellReplacements[original] = replacement;
+        // CoA b7c6b6dd: the flag is only written where the entry is - a refused call (the returns above) leaves the
+        // previous entry and its flag as they were.
+        if (redirect)
+            m_temporarySpellReplacementKeepsCast.erase(original);
+        else
+            m_temporarySpellReplacementKeepsCast.insert(original);
         if (onBar)
             m_temporarySpellReplacementsOnBar.insert(original);
         else
@@ -14064,6 +14075,17 @@ uint32 Player::GetTemporarySpellReplacement(uint32 original) const
     auto itr = m_temporarySpellReplacements.find(original);
     return itr != m_temporarySpellReplacements.end() && HasActiveSpell(original) && HasActiveSpell(itr->second) ?
         itr->second : original;
+}
+
+// CoA b7c6b6dd (#6972): the cast path asks this, not GetTemporarySpellReplacement. An alias set with redirect = false
+// (Witch Doctor: Reclamation -> Spirit Volley while Spirit Volley is ready) still draws the replacement on the
+// button, but the player may cast the original: the request is neither refused nor rewritten. Every other
+// replacement keeps FL's behaviour - the request is redirected to the replacement (OI-7).
+uint32 Player::GetCastReplacement(uint32 original) const
+{
+    if (m_temporarySpellReplacementKeepsCast.count(original))
+        return original;
+    return GetTemporarySpellReplacement(original);
 }
 
 // Forgotten Land: teach a spell that is about to become a temporary replacement without telling the client:
@@ -14100,6 +14122,7 @@ bool Player::ForgetHiddenTemporarySpell(uint32 spellId)
         if (it->first == spellId || it->second == spellId)
         {
             m_temporarySpellReplacementsOnBar.erase(it->first);
+            m_temporarySpellReplacementKeepsCast.erase(it->first);
             it = m_temporarySpellReplacements.erase(it);
         }
         else

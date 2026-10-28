@@ -4589,7 +4589,9 @@ void Spell::SendSpellCooldown()
     Player* _player = unitCaster->ToPlayer();
 
     // mana/health/etc potions, disabled by client (until combat out as declarate)
-    if (m_CastItem && (m_CastItem->IsPotion() || m_spellInfo->IsCooldownStartedOnEvent()))
+    if (m_CastItem &&
+        (m_CastItem->IsPotion() || m_spellInfo->IsCooldownStartedOnEvent() ||
+         m_CastItem->GetTemplate()->UsesSharedPotionCooldown(m_spellInfo->Id)))
     {
         // need in some way provided data for Spell::finish SendCooldownEvent
         _player->SetLastPotionId(m_CastItem->GetEntry());
@@ -5993,7 +5995,9 @@ SpellCastResult Spell::CheckCast(bool strict, uint32* /*param1*/, uint32* /*para
             }
 
             // check if we are using a potion in combat for the 2nd+ time. Cooldown is added only after caster gets out of combat
-            if (unitCaster->ToPlayer()->GetLastPotionId() && m_CastItem && (m_CastItem->IsPotion() || m_spellInfo->IsCooldownStartedOnEvent()))
+            if (unitCaster->ToPlayer()->GetLastPotionId() && m_CastItem &&
+                (m_CastItem->IsPotion() || m_spellInfo->IsCooldownStartedOnEvent() ||
+                 m_CastItem->GetTemplate()->UsesSharedPotionCooldown(m_spellInfo->Id)))
                 return SPELL_FAILED_NOT_READY;
         }
         else if (!IsTriggered() && unitCaster && unitCaster->IsCreature() && unitCaster->ToCreature()->IsSpellProhibited(m_spellInfo->GetSchoolMask()))

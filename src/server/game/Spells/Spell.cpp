@@ -6333,8 +6333,9 @@ SpellCastResult Spell::CheckCast(bool strict, uint32* /*param1*/, uint32* /*para
     Unit const* divineCaster = divineCharge ? divineCharge->GetCaster() : nullptr;
     bool divineSteed = divineCaster && divineCaster->IsPlayer() && divineCaster->getClass() == CLASS_MONK &&
         unitCaster->GetMountID() == 14584 && !unitCaster->IsInFlight();
+    bool tinkerMechsuitConsumable = m_CastItem && m_CastItem->GetTemplate()->Class == ITEM_CLASS_CONSUMABLE;
     bool tinkerMechsuit = unitCaster && unitCaster->IsPlayer() && unitCaster->getClass() == CLASS_TINKER &&
-        m_spellInfo->SpellFamilyName == 34 && !unitCaster->IsInFlight() &&
+        (m_spellInfo->SpellFamilyName == 34 || tinkerMechsuitConsumable) && !unitCaster->IsInFlight() &&
         unitCaster->HasAura(801384, unitCaster->GetGUID()) && unitCaster->HasAura(803451, unitCaster->GetGUID());
     if (unitCaster && unitCaster->IsMounted() && unitCaster->IsPlayer() && !HasTriggeredCastFlag(TRIGGERED_IGNORE_CASTER_MOUNTED_OR_ON_VEHICLE) &&
             !m_spellInfo->IsPassive() && !m_spellInfo->HasAttribute(SPELL_ATTR0_ALLOW_WHILE_MOUNTED) && !divineSteed &&

@@ -16,6 +16,7 @@
  */
 
 #include "Trainer.h"
+#include "TrainerProficiencyFilter.h"
 #include "Creature.h"
 #include "NPCPackets.h"
 #include "Player.h"
@@ -47,6 +48,9 @@ namespace Trainer
         for (Spell const& trainerSpell : _spells)
         {
             if (!player->IsSpellFitByClassAndRace(trainerSpell.SpellId))
+                continue;
+
+            if (TrainerProficiencyFilter::Refuses(player, trainerSpell.SpellId))
                 continue;
 
             SpellInfo const* trainerSpellInfo = sSpellMgr->AssertSpellInfo(trainerSpell.SpellId);
@@ -172,6 +176,9 @@ namespace Trainer
 
         // check race/class requirement
         if (!player->IsSpellFitByClassAndRace(trainerSpell->SpellId))
+            return SpellState::Unavailable;
+
+        if (TrainerProficiencyFilter::Refuses(player, trainerSpell->SpellId))
             return SpellState::Unavailable;
 
         // check skill requirement

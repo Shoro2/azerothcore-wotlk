@@ -11678,6 +11678,12 @@ void Player::AddSpellAndCategoryCooldowns(SpellInfo const* spellInfo, uint32 ite
                     continue;
                 }
 
+                // CoA 2ca36c94: a spell with no category cooldown of its own is not locked by the cast of another
+                // spell of its category (Graveyard vs Sacrifice Undead). FL: only for the Ascension classes, so the
+                // category groups of the stock classes behave as before.
+                if (!itemId && IsAscensionClass(getClass()) && !categorySpellInfo->CategoryRecoveryTime)
+                    continue;
+
                 _AddSpellCooldown(i_scset->second, cat, itemId, catrecTime, !spellInfo->IsCooldownStartedOnEvent() && catrec && rec && catrec != rec);
 
                 if (spellInfo->HasAttribute(SPELL_ATTR0_CU_FORCE_SEND_CATEGORY_COOLDOWNS))

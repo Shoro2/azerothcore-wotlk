@@ -79,6 +79,7 @@
 #include <unordered_set>
 
 constexpr uint32 ASCENSION_SPELL_HELLKNIGHT = 800703;
+constexpr uint32 ASCENSION_SPELL_WEAVER_FORM_PERIODIC_HASTE = 804981;
 
 float baseMoveSpeed[MAX_MOVE_TYPE] =
 {
@@ -6169,6 +6170,15 @@ bool Unit::HasAuraTypeWithAffectMask(AuraType auratype, SpellInfo const* affecte
     AuraEffectList const& mTotalAuraList = GetAuraEffectsByType(auratype);
     for (AuraEffectList::const_iterator i = mTotalAuraList.begin(); i != mTotalAuraList.end(); ++i)
         if ((*i)->IsAffectedOnSpell(affectedSpell))
+            return true;
+    return false;
+}
+
+// Venomancer Weaver Form hastes periodic ticks without shortening the aura, so the duration keeps Protraction.
+bool Unit::HasDurationShorteningPeriodicHaste(SpellInfo const* affectedSpell) const
+{
+    for (AuraEffect const* effect : GetAuraEffectsByType(SPELL_AURA_PERIODIC_HASTE))
+        if (effect->GetId() != ASCENSION_SPELL_WEAVER_FORM_PERIODIC_HASTE && effect->IsAffectedOnSpell(affectedSpell))
             return true;
     return false;
 }

@@ -7425,8 +7425,12 @@ void Player::_ApplyWeaponDamage(uint8 slot, ItemTemplate const* proto, ScalingSt
             SetAttackTime(OFF_ATTACK, apply ? proto->Delay : BASE_ATTACK_TIME);
     }
 
-    // No need to modify any physical damage for ferals as it is calculated from stats only
-    if (IsInFeralForm())
+    // No need to modify any physical damage for ferals whose form overrides attack speed:
+    // their damage is calculated from stats only (Spider and Beetle Form keep the weapon's speed, so they
+    // still apply weapon damage).
+    // FL: the exception is only for players of the Ascension classes. A stock class in a feral form keeps the
+    // early return, Ghost Wolf included (its SpellShapeshiftForm row has no attack-speed override).
+    if (IsInFeralForm() && (IsAttackSpeedOverridenShapeShift() || !IsAscensionClass(getClass())))
         return;
 
     if (CanModifyStats() && (GetWeaponDamageRange(attType, MAXDAMAGE) || proto->Delay))

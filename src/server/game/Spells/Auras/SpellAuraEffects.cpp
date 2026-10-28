@@ -2224,7 +2224,14 @@ void AuraEffect::HandleAuraModShapeshift(AuraApplication const* aurApp, uint8 mo
             uint32 oldPower = target->GetPower(PowerType);
             // reset power to default values only at power change
             if (target->getPowerType() != PowerType)
+            {
                 target->setPowerType(PowerType);
+                // CoA 4937e8ba: refresh the maximum of the power the form switches to.
+                // FL: only for players of the Ascension classes; a stock druid keeps its stored maximum.
+                if (Player* player = target->ToPlayer())
+                    if (IsAscensionClass(player->getClass()))
+                        player->UpdateMaxPower(PowerType);
+            }
 
             switch (form)
             {

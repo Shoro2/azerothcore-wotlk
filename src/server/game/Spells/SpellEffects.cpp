@@ -3616,7 +3616,10 @@ void Spell::EffectEnchantItemTmp(SpellEffIndex effIndex)
     // Rockbiter Weapon apply to both weapon
     if (!itemTarget)
         return;
-    if (m_spellInfo->SpellFamilyName == SPELLFAMILY_SHAMAN && m_spellInfo->SpellFamilyFlags[0] & 0x400000)
+    // The hardcoded damage-to-enchant table below only covers the stock ranks (ids below 100000); a custom spell
+    // sharing this family and flag would wrongly take this branch and leave its own enchant
+    // (Effects[effIndex].MiscValue) unapplied.
+    if (m_spellInfo->Id < 100000 && m_spellInfo->SpellFamilyName == SPELLFAMILY_SHAMAN && m_spellInfo->SpellFamilyFlags[0] & 0x400000)
     {
         uint32 spell_id = 0;
 
@@ -6891,6 +6894,8 @@ void Spell::SummonGuardian(uint32 i, uint32 entry, SummonPropertiesEntry const* 
         {
             ((Guardian*)summon)->InitStatsForLevel(summonLevel);
         }
+
+        sScriptMgr->OnGuardianSummoned(this, summon);
 
         // xinef: if we have more than one guardian, change follow angle
         if (summon->HasUnitTypeMask(UNIT_MASK_MINION) && totalNumGuardians > 1)

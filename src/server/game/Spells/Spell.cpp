@@ -6045,7 +6045,13 @@ SpellCastResult Spell::CheckCast(bool strict, uint32* /*param1*/, uint32* /*para
             checkForm = false;
             break;
         }
-        if (checkForm)
+        // CoA: Venomancer forms are stances, not shapeshift-locked kits; let a mount cast drop
+        // them the way Unit::Mount does for every other player, instead of refusing the cast.
+        bool prophetMount = unitCaster->IsPlayer() && unitCaster->getClass() == CLASS_PROPHET &&
+            (m_spellInfo->Effects[EFFECT_0].ApplyAuraName == SPELL_AURA_MOUNTED ||
+                m_spellInfo->Effects[EFFECT_1].ApplyAuraName == SPELL_AURA_MOUNTED ||
+                m_spellInfo->Effects[EFFECT_2].ApplyAuraName == SPELL_AURA_MOUNTED);
+        if (checkForm && !prophetMount)
         {
             // Cannot be used in this stance/form
             SpellCastResult shapeError = m_spellInfo->CheckShapeshift(unitCaster->GetShapeshiftForm());
@@ -7054,11 +7060,14 @@ SpellCastResult Spell::CheckCast(bool strict, uint32* /*param1*/, uint32* /*para
                     if (unitCaster && unitCaster->IsPlayer() && !allowMount && !m_spellInfo->AreaGroupId && !tinkerMechsuit)
                         return SPELL_FAILED_NO_MOUNTS_ALLOWED;
 
-                    if (unitCaster && unitCaster->IsInDisallowedMountForm())
+                    // CoA: a Venomancer's Beetle/Spider stance is dropped by the mount itself.
+                    if (unitCaster && unitCaster->IsInDisallowedMountForm() &&
+                        !(unitCaster->IsPlayer() && unitCaster->getClass() == CLASS_PROPHET))
                         return SPELL_FAILED_NOT_SHAPESHIFT;
 
                     // xinef: dont allow to cast mounts in specific transforms
-                    if (unitCaster && unitCaster->getTransForm())
+                    if (unitCaster && unitCaster->getTransForm() &&
+                        !(unitCaster->IsPlayer() && unitCaster->getClass() == CLASS_PROPHET))
                         if (SpellInfo const* transformSpellInfo = sSpellMgr->GetSpellInfo(unitCaster->getTransForm()))
                             if (transformSpellInfo->HasAttribute(SPELL_ATTR0_NO_IMMUNITIES) &&
                                     !transformSpellInfo->HasAttribute(SpellAttr0(SPELL_ATTR0_ALLOW_WHILE_MOUNTED | SPELL_ATTR0_AURA_IS_DEBUFF)))

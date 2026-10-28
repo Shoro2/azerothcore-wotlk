@@ -3802,6 +3802,9 @@ void Spell::EffectSummonPet(SpellEffIndex effIndex)
                 else
                     ++i;
             }
+            // FL: only for the Ascension classes (CoA 11232674); a stock pet summon sends no extra pet spell list.
+            if (IsAscensionClass(owner->getClass()))
+                owner->PetSpellInitialize();
             return;
         }
 

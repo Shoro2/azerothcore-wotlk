@@ -5,6 +5,36 @@
 
 ## Custom changes (project-specific)
 
+- 2026-10-28 — CoA catch-up round 6, the core picks (CU6-WP5, branch `claude/coa-round6-a1576d86`, 29 code commits on `c73724228`; plan `share-public/docs/World of Warcraft/coa-classes/records/cu6/cu6-plan-report-20261028.md` §3) — 29 CoA commits of `4670ac25..29f4e9fe` that fix our classes or close a crash of ours, each with the CoA commit and PR in its message. Lines marked `// FL:` limit a CoA rule to the Ascension classes (or the objects they own), so the ten stock classes keep stock behaviour; CoA's `m_caster`-as-Unit reads `unitCaster` (AzerothCore #27627). Deliberate stock fixes: `504b9a31`, `c33ccf28`, `81c265ae`, `53780b5d`, `22fa71fd`. Not taken: the optional stock fixes of plan §3, the RA session rewrite and config-log dedupe of `c33ccf28`, the Hero/Wildcard/Freepick parts, `EffectAscensionModifyFamilyCooldown` (third hunk of `e249293b`, function from skipped `3aa92879`). `DealsDamage` needs no core pick (`AscensionPrimalistWildheart.cpp` defines its own).
+  - `504b9a31` (#8194): **crash fix** - a gossip menu past 32 options drops the option and logs instead of the `ASSERT` (stock)
+  - `c33ccf28` (#8408): **crash guards** - `GetSpellWithRank` past a chain end, Death Grip without a base target / destination, Master of Elements past Living Bomb's last rank (stock)
+  - `81c265ae` (#8869, part 3): **crash fix** - `.reset spells <offline character>` no longer dereferences a null player (stock)
+  - `53780b5d` (#8938): **crash/OOB fix** - Hex Lord reads a valid ability row for classes 12-32 (`GetLegacyClassForCustomClass`); shadow priests get row 12 instead of the druid row 11 (stock)
+  - `e374bb25` (#7779): Pyromancer Draconic Aspect (802117) mounts/dismounts - FL: the mountable display-form rule only for players of classes 12-32
+  - `b93210e7` (#8054): Ranger Waterskin cooldown (`ItemTemplate::UsesSharedPotionCooldown`, category 5004 - no stock item carries it) and passive `SPELL_AURA_ASCENSION_IGNORE_MIN_RANGE` sent to the client
+  - `4bcd0946` (#8079): Chronomancer in Incarnation of Chaos (570067) casts Chromatic Shard while moving
+  - `56a68f2a` (#8168): a lingering channeled aura (Ignis Ultimatus) can be cancelled - FL: only classes 12-32
+  - `4937e8ba` (#8334): `UpdateMaxPower` after a shapeshift to another power type - FL: only classes 12-32 (druid forms unchanged)
+  - `4fda95da` (#8405): `Unit::HasDurationShorteningPeriodicHaste` - Weaver Form (804981) hastes ticks without shortening the aura; otherwise identical to the old lookup
+  - `11232674`, `3a66a484` (#8443, #8442): pet bars for the pets of classes 12-32 (`Pet::IsPermanentPetFor`, `SummonPet`, Tinker mechanicals); the pet spell list re-send in `EffectSummonPet` only for classes 12-32
+  - `3b20cb56` (#8623): Ranger Skinning takes no primary profession slot (class 21)
+  - `23d0fbca` (#8647): non-totem summons of classes 12-32 in a totem slot are not announced with `SMSG_TOTEM_CREATED` - FL: stock owners always announce
+  - `2ca36c94` (#8685): a spell without its own category cooldown is not locked by a category mate - FL: only classes 12-32
+  - `1221b742` (#8750): `Player::LoadActions(result, send = true)`
+  - `922482c0` (#9026, hand placement): a CoA-class player's leap at a target ends facing it (`JumpLandingFacingEvent`) - FL: only classes 12-32
+  - `2a290352` (#9050): Dungeon Finder Need rules use the best armor skill / Shield skill of classes 12-32
+  - `22fa71fd` (#9048): permanent positive auras of a pet are saved at logout (stock pets gain it too)
+  - `6b6d0bfa` (#9341): `Unit::CanDefendDuringCast` (Bloodmage with 801955) via `IsNonMeleeSpellCast(..., skipGeneric)`
+  - `354ec4d6` (#9428): `TrainerProficiencyFilter` hook (null resolver = no effect) in `Trainer::SendSpells` / `GetSpellState`
+  - `d1f995fd` (#9504, hand placement): Flame Throwing 11100/12353 range for every damaging spell - FL: only when the modifier's aura belongs to a player of classes 12-32 (the stock Mage talent has the same ids)
+  - `1146fb20` (#9514): `UpdateArmor` on a Strength change (no stock aura-182 row takes a Strength term)
+  - `adc021ba` (#9535, hand placement): `ALLSPELLHOOK_ON_GUARDIAN_SUMMONED` / `ScriptMgr::OnGuardianSummoned` (additive), Venomancer (class 29) mounts from Beetle/Spider stance, Rockbiter table only below spell id 100000
+  - `0fe1385a` (#9532): weapon damage in feral forms that keep weapon speed - FL: only classes 12-32 (Ghost Wolf has no attack-speed override); Shadra's Lair 804978 in the TargetA ally exception
+  - `7c9bfc87` (#9558): Valkyr's Grip (Sun Cleric) removes the Titan's Grip penalty aura
+  - `7648c32d` (#9562): the Tinker Mechsuit exemption also covers consumable item casts
+  - `0110e6fb` (#9632, hand placement): Sun Stride 680700 starts its cooldown on cast (`SPELL_ATTR0_COOLDOWN_ON_EVENT` cleared)
+  - `e249293b` (#9609, hand placement, 2 of 3 hunks): `ModifyAscensionCooldown` walks the rank chain
+  - affected files: `Entities/Creature/GossipDef.cpp`, `Entities/Creature/Trainer.cpp`, `Entities/Creature/TrainerProficiencyFilter.h` (new), `Entities/Item/ItemTemplate.h`, `Entities/Pet/Pet.cpp`, `Entities/Player/Player.cpp`, `Entities/Player/Player.h`, `Entities/Player/PlayerStorage.cpp`, `Entities/Player/PlayerUpdates.cpp`, `Entities/Totem/Totem.cpp`, `Entities/Unit/StatSystem.cpp`, `Entities/Unit/Unit.cpp`, `Entities/Unit/Unit.h`, `Handlers/SpellHandler.cpp`, `Scripting/ScriptDefines/AllSpellScript.cpp`, `Scripting/ScriptDefines/AllSpellScript.h`, `Scripting/ScriptMgr.h`, `Spells/Auras/SpellAuraEffects.cpp`, `Spells/Auras/SpellAuras.cpp`, `Spells/Spell.cpp`, `Spells/SpellEffects.cpp`, `Spells/SpellInfo.cpp`, `Spells/SpellInfoCorrections.cpp`, `Spells/SpellMgr.cpp`, `scripts/Commands/cs_reset.cpp`, `scripts/EasternKingdoms/ZulAman/boss_hexlord.cpp`, `scripts/Spells/spell_dk.cpp`, `scripts/Spells/spell_mage.cpp`
 - 2026-10-15 — CoA catch-up round 5, the core picks (CU5-WP5, branch `claude/coa-round5-f111171c`, 11 code commits on `8a87913f5`; plan `ForgottenLand2.0/tools/coa-program/cu5-plan-report.md` §3) — 11 CoA commits of `fc359be9..4670ac25` that the kept class code needs or that close a hole of ours
   - `ccd9a553` (#7644): **crash fix** - Flask of the North (script spell 67019) for a non-stock class no longer reads an empty list out of bounds (stock cases untouched)
   - `7da8a544` (#5580): **64-bit form masks** - `SpellEntryfmt` loads Spell.dbc fields 13/15, `SpellInfo::Stances`/`StancesNot` are `uint64`, every stance test shifts in 64 bits; forms above 32 (113 CoA spells) are enforced now, closing "DBG-2 gap (2)". Stock-neutral (no stock-range row has a high word, no `spell_dbc` row either); FL keeps the old `1 << 31` result of "no form to go on to" in `HandleShapeshiftBoosts`, so priest/druid self-buffs survive leaving a form

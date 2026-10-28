@@ -95,6 +95,13 @@ void SpellMgr::LoadSpellInfoCorrections()
         spellInfo->Effects[EFFECT_0].TargetB = SpellImplicitTargetInfo(0);
     });
 
+    // CoA: Sun Stride starts its normal 24 sec cooldown on cast; the cooldown-on-event flag left it
+    // stuck at "Ability is not ready yet" with no timer.
+    ApplySpellFix({ 680700 }, [](SpellInfo* spellInfo)
+    {
+        spellInfo->Attributes &= ~SPELL_ATTR0_COOLDOWN_ON_EVENT;
+    });
+
     ApplySpellFix({
         467,    // Thorns (Rank 1)
         782,    // Thorns (Rank 2)

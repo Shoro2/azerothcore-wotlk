@@ -253,6 +253,7 @@ enum PlayerHook
     PLAYERHOOK_ON_GET_TRAINER_SPELL_STATE,
     PLAYERHOOK_ON_AFTER_TRAIN_SPELL,
     PLAYERHOOK_ON_REFRESH_QUEST_GIVER,
+    PLAYERHOOK_ON_ADD_ITEM_BY_COMMAND,
     PLAYERHOOK_END
 };
 
@@ -495,6 +496,9 @@ public:
 
     // After receiving item as a quest reward
     virtual void OnPlayerQuestRewardItem(Player* /*player*/, Item* /*item*/, uint32 /*count*/) { }
+
+    // FL: after a GM's .additem stored a new item (cursed = the command's optional "cursed" word)
+    virtual void OnPlayerAddItemByCommand(Player* /*player*/, Item* /*item*/, uint32 /*count*/, bool /*cursed*/) { }
 
     // When placing a bid or buying out an auction
     [[nodiscard]] virtual bool OnPlayerCanPlaceAuctionBid(Player* /*player*/, AuctionEntry* /*auction*/) { return true; }

@@ -412,6 +412,11 @@ void ScriptMgr::OnPlayerQuestRewardItem(Player* player, Item* item, uint32 count
     CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_QUEST_REWARD_ITEM, script->OnPlayerQuestRewardItem(player, item, count));
 }
 
+void ScriptMgr::OnPlayerAddItemByCommand(Player* player, Item* item, uint32 count, bool cursed)
+{
+    CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_ADD_ITEM_BY_COMMAND, script->OnPlayerAddItemByCommand(player, item, count, cursed));
+}
+
 bool ScriptMgr::OnPlayerCanPlaceAuctionBid(Player* player, AuctionEntry* auction)
 {
     CALL_ENABLED_BOOLEAN_HOOKS(PlayerScript, PLAYERHOOK_CAN_PLACE_AUCTION_BID, !script->OnPlayerCanPlaceAuctionBid(player, auction));

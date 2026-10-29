@@ -1721,7 +1721,9 @@ public:
         return true;
     }
 
-    static bool HandleAddItemCommand(ChatHandler* handler, Optional<PlayerIdentifier> player, ItemTemplate const* itemTemplate, Optional<int32> _count)
+    // FL: an optional trailing "cursed" (operator 2026-10-29) asks the item roll module for a cursed item;
+    // without it .additem still rolls a normal one (OnPlayerAddItemByCommand)
+    static bool HandleAddItemCommand(ChatHandler* handler, Optional<PlayerIdentifier> player, ItemTemplate const* itemTemplate, Optional<int32> _count, Optional<EXACT_SEQUENCE("cursed")> cursed)
     {
         if (!sObjectMgr->GetItemTemplate(itemTemplate->ItemId))
         {
@@ -1882,6 +1884,8 @@ public:
         }
 
         Item* item = playerTarget->StoreNewItem(dest, itemId, true);
+        if (item)
+            sScriptMgr->OnPlayerAddItemByCommand(playerTarget, item, uint32(count), cursed.has_value());
 
         Player* p = handler->GetSession() ? handler->GetSession()->GetPlayer() : nullptr;
         // remove binding (let GM give it to another player later)

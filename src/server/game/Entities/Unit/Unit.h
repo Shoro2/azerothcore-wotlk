@@ -1367,7 +1367,8 @@ public:
 
     int32 GetHighestExclusiveSameEffectSpellGroupValue(AuraEffect const* aurEff, AuraType auraType, bool checkMiscValue = false, int32 miscValue = 0, bool ascensionFamiliesOnly = false) const;
     bool IsHighestExclusiveAura(Aura const* aura, bool removeOtherAuraApplications = false);
-    bool IsHighestExclusiveAuraEffect(SpellInfo const* spellInfo, AuraType auraType, int32 effectAmount, uint8 auraEffectMask, bool removeOtherAuraApplications = false);
+    // FL: casterGUID set = the caster's own aura of the same spell never counts as stronger (he may always refresh it)
+    bool IsHighestExclusiveAuraEffect(SpellInfo const* spellInfo, AuraType auraType, int32 effectAmount, uint8 auraEffectMask, bool removeOtherAuraApplications = false, ObjectGuid casterGUID = ObjectGuid::Empty);
 
     // aura apply/remove helpers - you should better not use these
     Aura* _TryStackingOrRefreshingExistingAura(SpellInfo const* newAura, uint8 effMask, Unit* caster, int32* baseAmount = nullptr, Item* castItem = nullptr, ObjectGuid casterGUID = ObjectGuid::Empty, bool periodicReset = false);

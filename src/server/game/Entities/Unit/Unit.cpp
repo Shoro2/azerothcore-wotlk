@@ -4689,13 +4689,20 @@ bool Unit::IsHighestExclusiveAura(Aura const* aura, bool removeOtherAuraApplicat
     return true;
 }
 
-bool Unit::IsHighestExclusiveAuraEffect(SpellInfo const* spellInfo, AuraType auraType, int32 effectAmount, uint8 auraEffectMask, bool removeOtherAuraApplications /*= false*/)
+bool Unit::IsHighestExclusiveAuraEffect(SpellInfo const* spellInfo, AuraType auraType, int32 effectAmount, uint8 auraEffectMask, bool removeOtherAuraApplications /*= false*/, ObjectGuid casterGUID /*= ObjectGuid::Empty*/)
 {
     AuraEffectList const& auras = GetAuraEffectsByType(auraType);
     for (Unit::AuraEffectList::const_iterator itr = auras.begin(); itr != auras.end();)
     {
         AuraEffect const* existingAurEff = (*itr);
         ++itr;
+
+        // FL (operator 2026-10-29: "nur eigenen buff immer überschreiben lassen"): a caster may always refresh his
+        // own aura of the same spell, even when this cast would come out weaker - a Thorns cast in Moonkin Form
+        // with FL's spell power made the caster-form recast bounce ("A more powerful spell is already active").
+        // Another caster's stronger aura still wins.
+        if (casterGUID && existingAurEff->GetCasterGUID() == casterGUID && existingAurEff->GetId() == spellInfo->Id)
+            continue;
 
         if (sSpellMgr->CheckSpellGroupStackRules(spellInfo, existingAurEff->GetSpellInfo()) == SPELL_GROUP_STACK_RULE_EXCLUSIVE_HIGHEST)
         {

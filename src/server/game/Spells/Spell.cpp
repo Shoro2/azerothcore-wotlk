@@ -7145,7 +7145,8 @@ SpellCastResult Spell::CheckCast(bool strict, uint32* /*param1*/, uint32* /*para
         if (!nonAuraEffectMask && (approximateAuraEffectMask & (1 << i)) && !m_spellInfo->IsTargetingArea())
             if (Unit* target = m_targets.GetUnitTarget())
                 if (!target->IsHighestExclusiveAuraEffect(m_spellInfo, AuraType(m_spellInfo->Effects[i].ApplyAuraName),
-                    m_spellInfo->Effects[i].CalcValue(m_caster, &m_spellValue->EffectBasePoints[i]), approximateAuraEffectMask, false))
+                    m_spellInfo->Effects[i].CalcValue(m_caster, &m_spellValue->EffectBasePoints[i]), approximateAuraEffectMask, false,
+                    m_caster->GetGUID()))
                     return SPELL_FAILED_AURA_BOUNCED;
     }
 

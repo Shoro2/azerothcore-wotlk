@@ -25,6 +25,7 @@
 #include "LocalLevelScaling.h"
 #include "Group.h"
 #include "MapMgr.h"
+#include "ObjectMgr.h"
 #include "Player.h"
 #include "PoolMgr.h"
 #include "QuestPackets.h"
@@ -478,6 +479,32 @@ void Player::AddQuestAndCheckCompletion(Quest const* quest, Object* questGiver)
     }
 }
 
+// FL (player report 2026-10-27, the operator 2026-10-29: "a wenn es immer eine gleiche version für allianz und horde
+// gibt"): a quest reward flagged for the other faction (ITEM_FLAG2_FACTION_*) is handed out as the player's own
+// faction's version when player_factionchange_items pairs it with a piece of the same inventory type - the FL quest
+// 90259 offered the Alliance-only rings Lorekeeper's Ring / Protector's Band to every race. Without such a pair the
+// item stays as it is.
+static uint32 FactionRewardItem(Player const* player, uint32 itemId)
+{
+    ItemTemplate const* proto = sObjectMgr->GetItemTemplate(itemId);
+    if (!proto || !proto->InventoryType)
+        return itemId;
+
+    bool const wrong = ((proto->Flags2 & ITEM_FLAG2_FACTION_ALLIANCE) && player->GetTeamId() != TEAM_ALLIANCE)
+        || ((proto->Flags2 & ITEM_FLAG2_FACTION_HORDE) && player->GetTeamId() != TEAM_HORDE);
+    if (!wrong)
+        return itemId;
+
+    for (auto const& [allianceItem, hordeItem] : sObjectMgr->FactionChangeItems)
+    {
+        uint32 const pair = allianceItem == itemId ? hordeItem : hordeItem == itemId ? allianceItem : 0;
+        if (ItemTemplate const* pairProto = pair ? sObjectMgr->GetItemTemplate(pair) : nullptr)
+            if (pairProto->InventoryType == proto->InventoryType)
+                return pair;
+    }
+    return itemId;
+}
+
 bool Player::CanRewardQuest(Quest const* quest, uint32 reward, bool msg)
 {
     // prevent receive reward with quest items in bank or for not completed quest
@@ -499,7 +526,7 @@ bool Player::CanRewardQuest(Quest const* quest, uint32 reward, bool msg)
     {
         if (quest->RewardChoiceItemId[reward])
         {
-            InventoryResult res = CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, quest->RewardChoiceItemId[reward], quest->RewardChoiceItemCount[reward]);
+            InventoryResult res = CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, FactionRewardItem(this, quest->RewardChoiceItemId[reward]), quest->RewardChoiceItemCount[reward]);
             if (res != EQUIP_ERR_OK)
             {
                 SendEquipError(res, nullptr, nullptr, quest->RewardChoiceItemId[reward]);
@@ -514,7 +541,7 @@ bool Player::CanRewardQuest(Quest const* quest, uint32 reward, bool msg)
         {
             if (quest->RewardItemId[i])
             {
-                InventoryResult res = CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, quest->RewardItemId[i], quest->RewardItemIdCount[i]);
+                InventoryResult res = CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, FactionRewardItem(this, quest->RewardItemId[i]), quest->RewardItemIdCount[i]);
                 if (res != EQUIP_ERR_OK)
                 {
                     SendEquipError(res, nullptr, nullptr, quest->RewardItemId[i]);
@@ -717,7 +744,7 @@ void Player::RewardQuest(Quest const* quest, uint32 reward, Object* questGiver, 
 
     if (quest->GetRewChoiceItemsCount())
     {
-        if (uint32 itemId = quest->RewardChoiceItemId[reward])
+        if (uint32 itemId = FactionRewardItem(this, quest->RewardChoiceItemId[reward]))
         {
             ItemPosCountVec dest;
             if (CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, itemId, quest->RewardChoiceItemCount[reward]) == EQUIP_ERR_OK)
@@ -738,7 +765,7 @@ void Player::RewardQuest(Quest const* quest, uint32 reward, Object* questGiver, 
     {
         for (uint32 i = 0; i < quest->GetRewItemsCount(); ++i)
         {
-            if (uint32 itemId = quest->RewardItemId[i])
+            if (uint32 itemId = FactionRewardItem(this, quest->RewardItemId[i]))
             {
                 ItemPosCountVec dest;
                 if (CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, itemId, quest->RewardItemIdCount[i]) == EQUIP_ERR_OK)

@@ -397,6 +397,7 @@ public: /* PlayerScript */
     void OnPlayerCreateItem(Player* player, Item* item, uint32 count);
     void OnPlayerQuestRewardItem(Player* player, Item* item, uint32 count);
     void OnPlayerAddItemByCommand(Player* player, Item* item, uint32 count, bool cursed);
+    bool OnPlayerCanReplaceStrongerOwnBuff(Player* player, Spell* spell, Unit* target, AuraEffect const* existing, int32 activeAmount, int32 newAmount);
     bool OnPlayerCanPlaceAuctionBid(Player* player, AuctionEntry* auction);
     void OnPlayerGroupRollRewardItem(Player* player, Item* item, uint32 count, RollVote voteType, Roll* roll);
     bool OnPlayerBeforeOpenItem(Player* player, Item* item);

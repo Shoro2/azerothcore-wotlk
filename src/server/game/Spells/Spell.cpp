@@ -6448,6 +6448,11 @@ SpellCastResult Spell::CheckCast(bool strict, uint32* /*param1*/, uint32* /*para
 
     uint8 approximateAuraEffectMask = 0;
     uint8 nonAuraEffectMask = 0;
+    // FL: the player's own stronger aura on the target (asked about at the end of the check)
+    Unit* ownStrongerTarget = nullptr;
+    AuraEffect const* ownStrongerAurEff = nullptr;
+    int32 ownStrongerActiveAmount = 0;
+    int32 ownStrongerNewAmount = 0;
     for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
     {
         // for effects of spells that have only one target
@@ -7144,10 +7149,18 @@ SpellCastResult Spell::CheckCast(bool strict, uint32* /*param1*/, uint32* /*para
         // check if target already has the same type, but more powerful aura
         if (!nonAuraEffectMask && (approximateAuraEffectMask & (1 << i)) && !m_spellInfo->IsTargetingArea())
             if (Unit* target = m_targets.GetUnitTarget())
+            {
+                int32 const effectAmount = m_spellInfo->Effects[i].CalcValue(m_caster, &m_spellValue->EffectBasePoints[i]);
                 if (!target->IsHighestExclusiveAuraEffect(m_spellInfo, AuraType(m_spellInfo->Effects[i].ApplyAuraName),
-                    m_spellInfo->Effects[i].CalcValue(m_caster, &m_spellValue->EffectBasePoints[i]), approximateAuraEffectMask, false,
-                    m_caster->GetGUID()))
+                    effectAmount, approximateAuraEffectMask, false, m_caster->GetGUID()))
                     return SPELL_FAILED_AURA_BOUNCED;
+
+                if (!ownStrongerAurEff && strict && unitCaster && unitCaster->IsPlayer() && !IsTriggered() && m_spellInfo->IsPositive())
+                    if ((ownStrongerAurEff = target->GetOwnStrongerExclusiveAuraEffect(m_spellInfo,
+                        AuraType(m_spellInfo->Effects[i].ApplyAuraName), effectAmount, approximateAuraEffectMask, unitCaster,
+                        ownStrongerActiveAmount, ownStrongerNewAmount)))
+                        ownStrongerTarget = target;
+            }
     }
 
     // check trade slot case (last, for allow catch any another cast problems)
@@ -7196,6 +7209,19 @@ SpellCastResult Spell::CheckCast(bool strict, uint32* /*param1*/, uint32* /*para
     if (m_CastItem && m_CastItem->GetTemplate()->InventoryType == INVTYPE_RELIC && m_triggeredByAuraSpell)
         if (unitCaster && unitCaster->HasSpellCooldown(SPELL_RELIC_COOLDOWN) && !unitCaster->HasSpellItemCooldown(SPELL_RELIC_COOLDOWN, m_CastItem->GetEntry()))
             return SPELL_FAILED_NOT_READY;
+
+    // FL (operator 2026-10-29: "a"): a player's own buff of an exclusive-highest group would come out weaker than the one
+    // he already has on the target - the PlayerScript hook decides (mod-custom-spells asks him in a popup and refuses
+    // until he confirms; without a script the cast goes ahead). Allowed, his old aura goes, so the new one applies (a
+    // lower rank would otherwise be dropped as the weaker aura when it lands). Checked last: every other check passed.
+    if (ownStrongerAurEff)
+    {
+        if (!sScriptMgr->OnPlayerCanReplaceStrongerOwnBuff(unitCaster->ToPlayer(), this, ownStrongerTarget, ownStrongerAurEff,
+            ownStrongerActiveAmount, ownStrongerNewAmount))
+            return SPELL_FAILED_DONT_REPORT;
+
+        ownStrongerTarget->RemoveAurasDueToSpell(ownStrongerAurEff->GetId(), ownStrongerAurEff->GetCasterGUID());
+    }
 
     // all ok
     return SPELL_CAST_OK;

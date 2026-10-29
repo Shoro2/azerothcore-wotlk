@@ -4689,6 +4689,45 @@ bool Unit::IsHighestExclusiveAura(Aura const* aura, bool removeOtherAuraApplicat
     return true;
 }
 
+AuraEffect const* Unit::GetOwnStrongerExclusiveAuraEffect(SpellInfo const* spellInfo, AuraType auraType, int32 effectAmount, uint8 auraEffectMask, Unit* caster, int32& activeAmount, int32& newAmount) const
+{
+    // FL: the caster's own aura that is stronger than what this cast would give - of an exclusive-highest group (the
+    // same spell or another member), or another rank of the same spell (a lower rank replaces a higher one of its
+    // chain without a word otherwise) - compared like with like: the same spell = the active effect's amount against
+    // that effect recalculated for the caster as he is now (spell power, forms, talents - the bare effectAmount lacks
+    // them); another spell = the base values of both for this caster (the bonuses scale both alike).
+    if (!caster)
+        return nullptr;
+
+    for (AuraEffect const* existingAurEff : GetAuraEffectsByType(auraType))
+    {
+        if (existingAurEff->GetCasterGUID() != caster->GetGUID())
+            continue;
+
+        bool const sameSpell = existingAurEff->GetId() == spellInfo->Id;
+        if (sSpellMgr->CheckSpellGroupStackRules(spellInfo, existingAurEff->GetSpellInfo()) != SPELL_GROUP_STACK_RULE_EXCLUSIVE_HIGHEST
+            && (sameSpell || !spellInfo->IsRankOf(existingAurEff->GetSpellInfo())))
+            continue;
+
+        int32 const amount = sameSpell ? const_cast<AuraEffect*>(existingAurEff)->CalculateAmount(caster) : effectAmount;
+        int32 const active = sameSpell ? existingAurEff->GetAmount()
+            : existingAurEff->GetSpellInfo()->Effects[existingAurEff->GetEffIndex()].CalcValue(caster);
+        int32 diff = abs(amount) - abs(active);
+        if (!diff)
+            for (int32 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+                diff += int32((auraEffectMask & (1 << i)) >> i) - int32((existingAurEff->GetBase()->GetEffectMask() & (1 << i)) >> i);
+
+        if (diff < 0)
+        {
+            activeAmount = active;
+            newAmount = amount;
+            return existingAurEff;
+        }
+    }
+
+    return nullptr;
+}
+
 bool Unit::IsHighestExclusiveAuraEffect(SpellInfo const* spellInfo, AuraType auraType, int32 effectAmount, uint8 auraEffectMask, bool removeOtherAuraApplications /*= false*/, ObjectGuid casterGUID /*= ObjectGuid::Empty*/)
 {
     AuraEffectList const& auras = GetAuraEffectsByType(auraType);
@@ -4697,11 +4736,12 @@ bool Unit::IsHighestExclusiveAuraEffect(SpellInfo const* spellInfo, AuraType aur
         AuraEffect const* existingAurEff = (*itr);
         ++itr;
 
-        // FL (operator 2026-10-29: "nur eigenen buff immer überschreiben lassen"): a caster may always refresh his
-        // own aura of the same spell, even when this cast would come out weaker - a Thorns cast in Moonkin Form
-        // with FL's spell power made the caster-form recast bounce ("A more powerful spell is already active").
-        // Another caster's stronger aura still wins.
-        if (casterGUID && existingAurEff->GetCasterGUID() == casterGUID && existingAurEff->GetId() == spellInfo->Id)
+        // FL (operator 2026-10-29: "nur eigenen buff immer überschreiben lassen", then "a"): the caster's own aura
+        // of the group never bounces his cast here - a Thorns cast in Moonkin Form with FL's spell power made the
+        // caster-form recast bounce ("A more powerful spell is already active"). Spell::CheckCast asks the player
+        // instead when his own aura is the stronger one (GetOwnStrongerExclusiveAuraEffect). Another caster's
+        // stronger aura still wins.
+        if (casterGUID && existingAurEff->GetCasterGUID() == casterGUID)
             continue;
 
         if (sSpellMgr->CheckSpellGroupStackRules(spellInfo, existingAurEff->GetSpellInfo()) == SPELL_GROUP_STACK_RULE_EXCLUSIVE_HIGHEST)

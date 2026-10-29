@@ -417,6 +417,11 @@ void ScriptMgr::OnPlayerAddItemByCommand(Player* player, Item* item, uint32 coun
     CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_ADD_ITEM_BY_COMMAND, script->OnPlayerAddItemByCommand(player, item, count, cursed));
 }
 
+bool ScriptMgr::OnPlayerCanReplaceStrongerOwnBuff(Player* player, Spell* spell, Unit* target, AuraEffect const* existing, int32 activeAmount, int32 newAmount)
+{
+    CALL_ENABLED_BOOLEAN_HOOKS(PlayerScript, PLAYERHOOK_ON_CAN_REPLACE_STRONGER_OWN_BUFF, !script->OnPlayerCanReplaceStrongerOwnBuff(player, spell, target, existing, activeAmount, newAmount));
+}
+
 bool ScriptMgr::OnPlayerCanPlaceAuctionBid(Player* player, AuctionEntry* auction)
 {
     CALL_ENABLED_BOOLEAN_HOOKS(PlayerScript, PLAYERHOOK_CAN_PLACE_AUCTION_BID, !script->OnPlayerCanPlaceAuctionBid(player, auction));

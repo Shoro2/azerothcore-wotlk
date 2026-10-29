@@ -254,6 +254,7 @@ enum PlayerHook
     PLAYERHOOK_ON_AFTER_TRAIN_SPELL,
     PLAYERHOOK_ON_REFRESH_QUEST_GIVER,
     PLAYERHOOK_ON_ADD_ITEM_BY_COMMAND,
+    PLAYERHOOK_ON_CAN_REPLACE_STRONGER_OWN_BUFF,
     PLAYERHOOK_END
 };
 
@@ -499,6 +500,10 @@ public:
 
     // FL: after a GM's .additem stored a new item (cursed = the command's optional "cursed" word)
     virtual void OnPlayerAddItemByCommand(Player* /*player*/, Item* /*item*/, uint32 /*count*/, bool /*cursed*/) { }
+
+    // FL: the player's cast of his own buff would replace his stronger one on the target (existing; the two amounts as
+    // the core compared them). false refuses the cast silently (SPELL_FAILED_DONT_REPORT); true lets it replace the old aura
+    [[nodiscard]] virtual bool OnPlayerCanReplaceStrongerOwnBuff(Player* /*player*/, Spell* /*spell*/, Unit* /*target*/, AuraEffect const* /*existing*/, int32 /*activeAmount*/, int32 /*newAmount*/) { return true; }
 
     // When placing a bid or buying out an auction
     [[nodiscard]] virtual bool OnPlayerCanPlaceAuctionBid(Player* /*player*/, AuctionEntry* /*auction*/) { return true; }
